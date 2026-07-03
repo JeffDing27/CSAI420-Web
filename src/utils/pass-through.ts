@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+
 export async function forwardRequest(request: Request, path: string) {
   const baseUrl = process.env.STEDI_API_BASE_URL || "https://dev.stedi.me";
   const url = `${baseUrl}${path}`;
@@ -21,11 +23,17 @@ export async function forwardRequest(request: Request, path: string) {
     }
   }
 
-  const upstreamRes = await fetch(url, {
-    method: request.method,
-    headers,
-    body,
-  });
+  let upstreamRes: Response;
+  try {
+    upstreamRes = await fetch(url, {
+      method: request.method,
+      headers,
+      body,
+    });
+  } catch (error) {
+    console.error(`[Pass-Through Error] Failed to fetch upstream ${url}:`, error);
+    return new Response("Internal Server Error", { status: 500 });
+  }
 
   const resContentType = upstreamRes.headers.get("content-type");
   const responseHeaders = new Headers();
@@ -33,17 +41,33 @@ export async function forwardRequest(request: Request, path: string) {
     responseHeaders.set("content-type", resContentType);
   }
 
-  if (resContentType && resContentType.includes("application/json")) {
-    const json = await upstreamRes.json();
-    return Response.json(json, {
-      status: upstreamRes.status,
-      headers: responseHeaders,
-    });
-  } else {
-    const text = await upstreamRes.text();
-    return new Response(text, {
+  const rawText = await upstreamRes.text();
+
+  if (!rawText) {
+    return new Response(null, {
       status: upstreamRes.status,
       headers: responseHeaders,
     });
   }
+
+  if (resContentType && resContentType.includes("application/json")) {
+    try {
+      const parsedBody = JSON.parse(rawText);
+      return NextResponse.json(parsedBody, {
+        status: upstreamRes.status,
+        headers: responseHeaders,
+      });
+    } catch (e) {
+      // JSON parse failed despite content-type, fallback to raw text
+      return new Response(rawText, {
+        status: upstreamRes.status,
+        headers: responseHeaders,
+      });
+    }
+  }
+
+  return new Response(rawText, {
+    status: upstreamRes.status,
+    headers: responseHeaders,
+  });
 }
