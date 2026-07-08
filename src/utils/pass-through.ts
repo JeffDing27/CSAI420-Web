@@ -78,6 +78,17 @@ export async function forwardRequest(request: Request, path: string) {
     console.error(`[Pass-Through] Response Body:`, rawText);
   }
 
+  // Handle STEDI API inconsistency on customer creation
+  if (
+    path === "/customer" &&
+    request.method === "POST" &&
+    upstreamRes.status === 500 &&
+    rawText &&
+    rawText.includes("500 Internal Server Error")
+  ) {
+    return new Response("Error creating customer", { status: 409 });
+  }
+
   const resContentType = upstreamRes.headers.get("content-type");
   const responseHeaders = new Headers();
   if (resContentType) {
