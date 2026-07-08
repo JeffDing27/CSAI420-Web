@@ -4,15 +4,20 @@ export async function forwardRequest(request: Request, path: string) {
   const baseUrl = process.env.STEDI_API_BASE_URL || "https://dev.stedi.me";
   const url = `${baseUrl}${path}`;
 
-  const headers = new Headers();
+  const token = request.headers.get("suresteps.session.token");
+
+  // Safe logging for session token
+  console.log(`[Pass-Through] ${request.method} ${path} | hasSessionToken: ${!!token}`);
+
+  const fetchHeaders: Record<string, string> = {};
+  
   const contentType = request.headers.get("content-type");
   if (contentType) {
-    headers.set("content-type", contentType);
+    fetchHeaders["content-type"] = contentType;
   }
 
-  const token = request.headers.get("suresteps.session.token");
   if (token) {
-    headers.set("suresteps.session.token", token);
+    fetchHeaders["suresteps.session.token"] = token;
   }
 
   let body: string | undefined = undefined;
@@ -39,7 +44,7 @@ export async function forwardRequest(request: Request, path: string) {
   try {
     upstreamRes = await fetch(url, {
       method: request.method,
-      headers,
+      headers: fetchHeaders,
       body,
     });
   } catch (error) {
