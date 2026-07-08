@@ -4,10 +4,33 @@ export async function forwardRequest(request: Request, path: string) {
   const baseUrl = process.env.STEDI_API_BASE_URL || "https://dev.stedi.me";
   const url = `${baseUrl}${path}`;
 
-  const token = request.headers.get("suresteps.session.token");
+  const incomingHeaderNames = Array.from(request.headers.keys());
+  console.log(`[Pass-Through] Incoming header names:`, incomingHeaderNames.join(", "));
+
+  const possibleTokenHeaders = [
+    "suresteps.session.token",
+    "SureSteps.Session.Token",
+    "suresteps-session-token",
+    "x-suresteps-session-token",
+    "authorization"
+  ];
+
+  let token: string | null = null;
+  let detectedSessionHeaderName = "none";
+
+  for (const headerName of possibleTokenHeaders) {
+    const val = request.headers.get(headerName);
+    if (val) {
+      token = headerName.toLowerCase() === "authorization" && val.startsWith("Bearer ")
+        ? val.substring(7)
+        : val;
+      detectedSessionHeaderName = headerName;
+      break;
+    }
+  }
 
   // Safe logging for session token
-  console.log(`[Pass-Through] ${request.method} ${path} | hasSessionToken: ${!!token}`);
+  console.log(`[Pass-Through] ${request.method} ${path} | hasSessionToken: ${!!token} | detectedSessionHeaderName: ${detectedSessionHeaderName}`);
 
   const fetchHeaders: Record<string, string> = {};
   
