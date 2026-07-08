@@ -8,11 +8,10 @@ export async function forwardRequest(request: Request, path: string) {
   console.log(`[Pass-Through] Incoming header names:`, incomingHeaderNames.join(", "));
 
   const possibleTokenHeaders = [
-    "suresteps.session.token",
-    "SureSteps.Session.Token",
-    "suresteps-session-token",
     "x-suresteps-session-token",
-    "authorization"
+    "authorization",
+    "suresteps-session-token",
+    "suresteps.session.token"
   ];
 
   let token: string | null = null;
