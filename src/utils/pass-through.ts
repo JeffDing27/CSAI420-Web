@@ -16,10 +16,22 @@ export async function forwardRequest(request: Request, path: string) {
   }
 
   let body: string | undefined = undefined;
+  let parsedReqBody: any = null;
+
   if (request.method !== "GET" && request.method !== "HEAD") {
-    const rawBody = await request.text();
-    if (rawBody) {
-      body = rawBody;
+    try {
+      const rawBody = await request.text();
+      if (rawBody) {
+        body = rawBody;
+        try {
+          parsedReqBody = JSON.parse(rawBody);
+        } catch (e) {
+          // Ignore JSON parse errors for request body
+        }
+      }
+    } catch (error) {
+      console.error(`[Pass-Through] Failed to read request body for ${path}:`, error);
+      return new Response("Internal Server Error", { status: 500 });
     }
   }
 
@@ -31,8 +43,39 @@ export async function forwardRequest(request: Request, path: string) {
       body,
     });
   } catch (error) {
-    console.error(`[Pass-Through Error] Failed to fetch upstream ${url}:`, error);
+    console.error(`[Pass-Through] Network/proxy error fetching upstream ${url}:`, error);
     return new Response("Internal Server Error", { status: 500 });
+  }
+
+  let rawText = "";
+  try {
+    rawText = await upstreamRes.text();
+  } catch (error) {
+    console.error(`[Pass-Through] Failed to read upstream response body for ${url}:`, error);
+    return new Response("Internal Server Error", { status: 500 });
+  }
+
+  if (!upstreamRes.ok) {
+    let logContext: any = {};
+    if (parsedReqBody) {
+      logContext = { ...parsedReqBody };
+      for (const key of Object.keys(logContext)) {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.includes("password") || lowerKey.includes("token") || lowerKey.includes("secret")) {
+          logContext[key] = "***REDACTED***";
+        }
+      }
+    }
+    
+    if (path.startsWith("/riskscore/") && request.method === "GET") {
+      logContext.email = path.replace("/riskscore/", "");
+    }
+
+    console.error(`[Pass-Through] Endpoint: ${path} | Method: ${request.method} | Upstream URL: ${url} | Status: ${upstreamRes.status}`);
+    if (Object.keys(logContext).length > 0) {
+      console.error(`[Pass-Through] Request Context:`, JSON.stringify(logContext));
+    }
+    console.error(`[Pass-Through] Response Body:`, rawText);
   }
 
   const resContentType = upstreamRes.headers.get("content-type");
@@ -40,8 +83,6 @@ export async function forwardRequest(request: Request, path: string) {
   if (resContentType) {
     responseHeaders.set("content-type", resContentType);
   }
-
-  const rawText = await upstreamRes.text();
 
   if (!rawText) {
     return new Response(null, {
