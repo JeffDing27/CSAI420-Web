@@ -53,12 +53,14 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export async function setConsent(customer: string, value: boolean) {
-  await kvSet(`consent:${customer}`, value ? "true" : "false");
+  const normalizedCustomer = decodeURIComponent(customer).toLowerCase();
+  await kvSet(`consent:${normalizedCustomer}`, value ? "true" : "false");
 }
 
 export async function getConsent(customer: string): Promise<boolean> {
-  const value = await kvGet<string>(`consent:${customer}`);
-  return value === "true";
+  const normalizedCustomer = decodeURIComponent(customer).toLowerCase();
+  const value = await kvGet<any>(`consent:${normalizedCustomer}`);
+  return value === "true" || value === true;
 }
 
 export async function setConsentedClinician(customer: string, clinicianUsername: string) {
