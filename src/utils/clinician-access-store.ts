@@ -40,11 +40,14 @@ async function kvSet(key: string, value: any): Promise<void> {
   }
 
   const valString = typeof value === 'string' ? value : JSON.stringify(value);
-  await fetch(`${url}/set/${key}`, {
+  const res = await fetch(`${url}/set/${key}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: valString
   });
+  
+  // Make sure KV write is fully awaited
+  await res.text();
 }
 
 // Graceful fallback for local testing if KV env vars are not set
@@ -55,42 +58,61 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export async function addClinicianAccessRequest(customerEmail: string, clinicianUsername: string): Promise<void> {
-  const normalizedEmail = customerEmail.toLowerCase();
+  const normalizedEmail = decodeURIComponent(customerEmail).trim().toLowerCase();
   const key = `clinicianAccessRequests:${normalizedEmail}`;
-  let requests: ClinicianAccessRequest[] = (await kvGet<ClinicianAccessRequest[]>(key)) || [];
   
-  const existingIndex = requests.findIndex(
-    req => req.clinicianUsername.toLowerCase() === clinicianUsername.toLowerCase()
-  );
+  let attempts = 0;
+  let success = false;
 
-  const requestDate = new Date().toISOString();
-  
-  const newRequest: ClinicianAccessRequest = {
-    clinicianUsername, // Preserve original case
-    customerEmail,     // Preserve original case for the JSON output
-    requestDate,
-    status: "pending"
-  };
+  while (!success && attempts < 5) {
+    let requests: ClinicianAccessRequest[] = (await kvGet<ClinicianAccessRequest[]>(key)) || [];
+    
+    const existingIndex = requests.findIndex(
+      req => req.clinicianUsername.toLowerCase() === clinicianUsername.toLowerCase()
+    );
 
-  if (existingIndex !== -1) {
-    // Replace the existing one, but keep everything else the same (i.e. status goes back to pending)
-    requests[existingIndex] = newRequest;
-  } else {
-    requests.push(newRequest);
+    const requestDate = new Date().toISOString();
+    
+    const newRequest: ClinicianAccessRequest = {
+      clinicianUsername, // Preserve original case
+      customerEmail,     // Preserve original case for the JSON output
+      requestDate,
+      status: "pending"
+    };
+
+    if (existingIndex !== -1) {
+      requests[existingIndex] = newRequest;
+    } else {
+      requests.push(newRequest);
+    }
+    
+    await kvSet(key, requests);
+    
+    // Read back the value to confirm it includes the new clinician
+    const checkRequests = (await kvGet<ClinicianAccessRequest[]>(key)) || [];
+    const found = checkRequests.some(
+      req => req.clinicianUsername.toLowerCase() === clinicianUsername.toLowerCase()
+    );
+    
+    if (found) {
+      success = true;
+    } else {
+      attempts++;
+      // Give the competing request time to finish before retrying
+      await new Promise(resolve => setTimeout(resolve, 50 * attempts));
+    }
   }
-  
-  await kvSet(key, requests);
 }
 
 export async function getClinicianAccessRequests(customerEmail: string): Promise<ClinicianAccessRequest[]> {
-  const normalizedEmail = customerEmail.toLowerCase();
+  const normalizedEmail = decodeURIComponent(customerEmail).trim().toLowerCase();
   const key = `clinicianAccessRequests:${normalizedEmail}`;
   const requests = await kvGet<ClinicianAccessRequest[]>(key);
   return requests || [];
 }
 
 export async function deleteClinicianAccessRequest(customerEmail: string, clinicianUsername: string): Promise<boolean> {
-  const normalizedEmail = customerEmail.toLowerCase();
+  const normalizedEmail = decodeURIComponent(customerEmail).trim().toLowerCase();
   const key = `clinicianAccessRequests:${normalizedEmail}`;
   let requests: ClinicianAccessRequest[] = (await kvGet<ClinicianAccessRequest[]>(key)) || [];
   
