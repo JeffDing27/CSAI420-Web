@@ -10,7 +10,7 @@ export async function GET(
   // Accept token header per requirements
   const token = request.headers.get("suresteps.session.token") || request.headers.get("x-suresteps-session-token");
   
-  const data = getConsentedClinicians(customer);
+  const data = await getConsentedClinicians(customer);
   return NextResponse.json(data, { status: 200 });
 }
 
@@ -27,7 +27,7 @@ export async function PATCH(
   const clinicianUsername = body.trim();
   
   if (clinicianUsername) {
-    setConsentedClinician(customer, clinicianUsername);
+    await setConsentedClinician(customer, clinicianUsername);
   }
   
   return new Response("Clinician consent updated successfully.", { status: 200 });
