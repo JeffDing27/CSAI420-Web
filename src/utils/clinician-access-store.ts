@@ -50,6 +50,93 @@ async function kvSet(key: string, value: any): Promise<void> {
   await res.text();
 }
 
+async function kvHSet(key: string, field: string, value: any): Promise<void> {
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+  const valString = typeof value === 'string' ? value : JSON.stringify(value);
+  
+  if (!url || !token) {
+    let hash = globalFallbackStore.get(key) || {};
+    hash[field] = valString;
+    globalFallbackStore.set(key, hash);
+    return;
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(["HSET", key, field, valString])
+  });
+  await res.text();
+}
+
+async function kvHGetAll<T>(key: string): Promise<T[]> {
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+  
+  if (!url || !token) {
+    let hash = globalFallbackStore.get(key) || {};
+    return Object.values(hash).map((val: any) => {
+      try { return JSON.parse(val); } catch(e) { return val; }
+    });
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(["HGETALL", key]),
+    cache: 'no-store'
+  });
+  const data = await res.json();
+  
+  const result = data.result || [];
+  const parsed: T[] = [];
+  
+  if (Array.isArray(result)) {
+    for (let i = 0; i < result.length; i += 2) {
+      const val = result[i+1];
+      try {
+        parsed.push(JSON.parse(val));
+      } catch (e) {
+        parsed.push(val as T);
+      }
+    }
+  } else if (typeof result === 'object') {
+    for (const val of Object.values(result)) {
+      try {
+        parsed.push(JSON.parse(val as string));
+      } catch (e) {
+        parsed.push(val as T);
+      }
+    }
+  }
+  
+  return parsed;
+}
+
+async function kvHDel(key: string, field: string): Promise<boolean> {
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+  
+  if (!url || !token) {
+    let hash = globalFallbackStore.get(key);
+    if (hash && hash[field]) {
+      delete hash[field];
+      globalFallbackStore.set(key, hash);
+      return true;
+    }
+    return false;
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(["HDEL", key, field])
+  });
+  const data = await res.json();
+  return data.result > 0;
+}
+
 // Graceful fallback for local testing if KV env vars are not set
 const globalForFallback = globalThis as unknown as { __fallbackStore: Map<string, any> };
 const globalFallbackStore = globalForFallback.__fallbackStore ?? new Map<string, any>();
@@ -59,71 +146,37 @@ if (process.env.NODE_ENV !== "production") {
 
 export async function addClinicianAccessRequest(customerEmail: string, clinicianUsername: string): Promise<void> {
   const normalizedEmail = decodeURIComponent(customerEmail).trim().toLowerCase();
-  const key = `clinicianAccessRequests:${normalizedEmail}`;
+  const normalizedClinician = clinicianUsername.trim().toLowerCase();
   
-  let attempts = 0;
-  let success = false;
+  const key = `clinicianAccessRequests:${normalizedEmail}`;
+  const field = normalizedClinician;
+  
+  const requestDate = new Date().toISOString();
+  
+  const newRequest: ClinicianAccessRequest = {
+    clinicianUsername, // Preserve original case
+    customerEmail,     // Preserve original case for the JSON output
+    requestDate,
+    status: "pending"
+  };
 
-  while (!success && attempts < 5) {
-    let requests: ClinicianAccessRequest[] = (await kvGet<ClinicianAccessRequest[]>(key)) || [];
-    
-    const existingIndex = requests.findIndex(
-      req => req.clinicianUsername.toLowerCase() === clinicianUsername.toLowerCase()
-    );
-
-    const requestDate = new Date().toISOString();
-    
-    const newRequest: ClinicianAccessRequest = {
-      clinicianUsername, // Preserve original case
-      customerEmail,     // Preserve original case for the JSON output
-      requestDate,
-      status: "pending"
-    };
-
-    if (existingIndex !== -1) {
-      requests[existingIndex] = newRequest;
-    } else {
-      requests.push(newRequest);
-    }
-    
-    await kvSet(key, requests);
-    
-    // Read back the value to confirm it includes the new clinician
-    const checkRequests = (await kvGet<ClinicianAccessRequest[]>(key)) || [];
-    const found = checkRequests.some(
-      req => req.clinicianUsername.toLowerCase() === clinicianUsername.toLowerCase()
-    );
-    
-    if (found) {
-      success = true;
-    } else {
-      attempts++;
-      // Give the competing request time to finish before retrying
-      await new Promise(resolve => setTimeout(resolve, 50 * attempts));
-    }
-  }
+  await kvHSet(key, field, newRequest);
 }
 
 export async function getClinicianAccessRequests(customerEmail: string): Promise<ClinicianAccessRequest[]> {
   const normalizedEmail = decodeURIComponent(customerEmail).trim().toLowerCase();
   const key = `clinicianAccessRequests:${normalizedEmail}`;
-  const requests = await kvGet<ClinicianAccessRequest[]>(key);
-  return requests || [];
+  
+  const requests = await kvHGetAll<ClinicianAccessRequest>(key);
+  return requests;
 }
 
 export async function deleteClinicianAccessRequest(customerEmail: string, clinicianUsername: string): Promise<boolean> {
   const normalizedEmail = decodeURIComponent(customerEmail).trim().toLowerCase();
+  const normalizedClinician = clinicianUsername.trim().toLowerCase();
+  
   const key = `clinicianAccessRequests:${normalizedEmail}`;
-  let requests: ClinicianAccessRequest[] = (await kvGet<ClinicianAccessRequest[]>(key)) || [];
+  const field = normalizedClinician;
   
-  const initialLength = requests.length;
-  requests = requests.filter(req => req.clinicianUsername.toLowerCase() !== clinicianUsername.toLowerCase());
-  
-  if (requests.length === initialLength) {
-    // No request was removed
-    return false;
-  }
-  
-  await kvSet(key, requests);
-  return true;
+  return await kvHDel(key, field);
 }
