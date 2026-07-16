@@ -1,15 +1,7 @@
 import { getClinicianAccessRequests } from "@/utils/clinician-access-store";
 import { NextResponse } from "next/server";
 
-function hasAuth(request: Request): boolean {
-  const possibleTokenHeaders = [
-    "suresteps.session.token",
-    "x-suresteps-session-token",
-    "suresteps-session-token",
-    "authorization"
-  ];
-  return possibleTokenHeaders.some(h => request.headers.has(h));
-}
+import { hasAuth } from "@/utils/auth";
 
 export async function GET(
   request: Request,
