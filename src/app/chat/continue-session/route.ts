@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   let aiResponse = "";
   let updatedFields = { ...session.collectedFields };
   let nextStep = session.nextStep;
-  let sessionActive = session.sessionActive;
+  let sessionActive: boolean = session.sessionActive;
 
   if (nextStep === 'greeting') {
     aiResponse = "Hi! I'm here to help you register for STEDI. Let's start with your first name. What is your first name?";
