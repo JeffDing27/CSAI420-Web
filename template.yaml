@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  STEDI Serverless Infrastructure
+
+Resources:
+  # ---------------------------------------------------------
+  # Week 4: Escalation Queue
+  # ---------------------------------------------------------
+  EscalationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: stedi-escalation-queue
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 1209600 # 14 days
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt EscalationDLQ.Arn
+        maxReceiveCount: 3
+
+  EscalationDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: stedi-escalation-dlq
+      MessageRetentionPeriod: 1209600
+
+  ProcessEscalationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./lambdas/process-escalation/
+      Handler: app.handler
+      Runtime: nodejs20.x
+      Timeout: 30
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt EscalationQueue.Arn
+            BatchSize: 10
