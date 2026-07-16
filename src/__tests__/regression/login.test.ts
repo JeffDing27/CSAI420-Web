@@ -1,11 +1,12 @@
-import { it, describe, expect, vi, beforeEach } from "vitest";
+import crypto from "crypto";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/login/route";
 import * as kvStore from "@/utils/kv-store";
 import * as passThrough from "@/utils/pass-through";
-import crypto from "crypto";
 
 vi.mock("@/utils/kv-store", () => ({
   kvGet: vi.fn(),
+  kvSet: vi.fn(),
 }));
 
 vi.mock("@/utils/pass-through", () => ({
@@ -27,7 +28,9 @@ describe("POST /login", () => {
   };
 
   const salt = crypto.randomBytes(16).toString("hex");
-  const passwordHash = crypto.pbkdf2Sync(validPayload.password, salt, 1000, 64, "sha512").toString("hex");
+  const passwordHash = crypto
+    .pbkdf2Sync(validPayload.password, salt, 1000, 64, "sha512")
+    .toString("hex");
 
   const mockUserRecord = {
     email: "testuser@example.com",
@@ -43,7 +46,7 @@ describe("POST /login", () => {
 
   it("STEDI forwarding - external login when local mode is disabled", async () => {
     (passThrough.forwardRequest as any).mockResolvedValueOnce(
-      new Response("mocked-stedi-token", { status: 200 })
+      new Response("mocked-stedi-token", { status: 200 }),
     );
 
     const res = await POST(createRequest(validPayload));
@@ -71,7 +74,7 @@ describe("POST /login", () => {
     // Provide email with spaces and uppercase
     const payload = { ...validPayload, userName: "  TestUser@EXAMPLE.com  " };
     const res = await POST(createRequest(payload));
-    
+
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text.length).toBeGreaterThan(10);

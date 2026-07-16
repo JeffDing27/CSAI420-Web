@@ -1,4 +1,7 @@
-import { NotificationProvider, MockNotificationProvider } from './notification-provider';
+import {
+  MockNotificationProvider,
+  type NotificationProvider,
+} from "./notification-provider";
 
 export class TwilioProvider implements NotificationProvider {
   async sendSMS(to: string, message: string): Promise<void> {
@@ -13,7 +16,10 @@ export class TwilioProvider implements NotificationProvider {
 }
 
 export function getNotificationProvider(): NotificationProvider {
-  if (process.env.TWILIO_ENABLED !== 'true' || process.env.TWILIO_DRY_RUN === 'true') {
+  if (
+    process.env.TWILIO_ENABLED !== "true" ||
+    process.env.TWILIO_DRY_RUN === "true"
+  ) {
     return new MockNotificationProvider();
   }
   return new TwilioProvider();

@@ -1,7 +1,8 @@
-import { addClinicianAccessRequest, deleteClinicianAccessRequest } from "@/utils/clinician-access-store";
 import { NextResponse } from "next/server";
-
 import { hasAuth } from "@/utils/auth";
+import { ClinicianAccessRequestService } from "@/services/clinician-access-request.service";
+
+const service = new ClinicianAccessRequestService();
 
 export async function POST(request: Request) {
   if (!hasAuth(request)) {
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     return new Response("Missing required fields", { status: 400 });
   }
 
-  await addClinicianAccessRequest(customerEmail, clinicianUsername);
+  await service.addRequest(customerEmail, clinicianUsername);
 
   // Return plain text as requested by tests
   return new Response("Access request submitted successfully", { status: 201 });
@@ -43,8 +44,11 @@ export async function DELETE(request: Request) {
     return new Response("Missing required fields", { status: 400 });
   }
 
-  const deleted = await deleteClinicianAccessRequest(customerEmail, clinicianUsername);
-  
+  const deleted = await service.deleteRequest(
+    customerEmail,
+    clinicianUsername,
+  );
+
   if (!deleted) {
     return new Response("Request not found", { status: 404 });
   }

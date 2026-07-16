@@ -7,9 +7,7 @@
       "contentHash": "d53fdca7ae18205376956c39a3a1729edfae843f63e5f2a6c5dd2c64ccd8a576",
       "installedAt": "2026-07-03T01:06:32.575Z",
       "updatedAt": "2026-07-03T01:06:32.575Z",
-      "agents": [
-        "cursor"
-      ],
+      "agents": ["cursor"],
       "method": "copy",
       "global": false
     },
@@ -19,9 +17,7 @@
       "contentHash": "76e50c2dc0ec574d959e54cd084c725eb8b2faaf7638d432dc95045e3d4eec5f",
       "installedAt": "2026-07-03T01:06:42.312Z",
       "updatedAt": "2026-07-03T01:06:42.312Z",
-      "agents": [
-        "cursor"
-      ],
+      "agents": ["cursor"],
       "method": "copy",
       "global": false
     },
@@ -31,9 +27,7 @@
       "contentHash": "349b256153447631c3ed356996c3a62fec52493d07ba75e37b12c458f9fbf6bb",
       "installedAt": "2026-07-03T01:06:50.391Z",
       "updatedAt": "2026-07-03T01:06:50.391Z",
-      "agents": [
-        "cursor"
-      ],
+      "agents": ["cursor"],
       "method": "copy",
       "global": false
     },
@@ -43,9 +37,7 @@
       "contentHash": "d05974df076f695f96b4e4c263ad19f2aaffe8ee6248c1b07a634dd9ed0ea51e",
       "installedAt": "2026-07-03T01:07:00.444Z",
       "updatedAt": "2026-07-03T01:07:00.444Z",
-      "agents": [
-        "cursor"
-      ],
+      "agents": ["cursor"],
       "method": "copy",
       "global": false
     }

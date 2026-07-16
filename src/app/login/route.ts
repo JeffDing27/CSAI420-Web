@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
-import { forwardRequest } from "@/utils/pass-through";
-import { kvGet } from "@/utils/kv-store";
 import crypto from "crypto";
+import { NextResponse } from "next/server";
+import { AuthService } from "@/lib/service/auth.service";
+import { kvGet } from "@/utils/kv-store";
+import { forwardRequest } from "@/utils/pass-through";
 
 const getCorsHeaders = () => {
   return {
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
   } catch (err) {
     return NextResponse.json(
       { error: "Invalid JSON body" },
-      { status: 400, headers: getCorsHeaders() }
+      { status: 400, headers: getCorsHeaders() },
     );
   }
 
@@ -35,31 +36,23 @@ export async function POST(request: Request) {
     const password = payload.password;
 
     if (!userName || !password) {
-      return new Response("Missing userName or password", { status: 400, headers: getCorsHeaders() });
+      return new Response("Missing userName or password", {
+        status: 400,
+        headers: getCorsHeaders(),
+      });
     }
 
-    const normalizedEmail = userName.trim().toLowerCase();
-    const existingUser = await kvGet<any>(`user:${normalizedEmail}`);
+    const { token, error } = await AuthService.login(userName, password);
 
-    if (!existingUser || !existingUser.passwordSalt || !existingUser.passwordHash) {
-      return new Response("Invalid credentials", { status: 401, headers: getCorsHeaders() });
-    }
-
-    const salt = existingUser.passwordSalt;
-    const expectedHash = existingUser.passwordHash;
-
-    const submittedHash = crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
-
-    const expectedHashBuffer = Buffer.from(expectedHash, "hex");
-    const submittedHashBuffer = Buffer.from(submittedHash, "hex");
-
-    if (expectedHashBuffer.length !== submittedHashBuffer.length || !crypto.timingSafeEqual(expectedHashBuffer, submittedHashBuffer)) {
-      return new Response("Invalid credentials", { status: 401, headers: getCorsHeaders() });
+    if (error) {
+      return new Response(error, { status: 401, headers: getCorsHeaders() });
     }
 
     // Return the existing successful login response shape expected by the mobile app (text token)
-    const token = crypto.randomUUID();
-    return new Response(token, { status: 200, headers: { ...getCorsHeaders(), "content-type": "text/plain" } });
+    return new Response(token!, {
+      status: 200,
+      headers: { ...getCorsHeaders(), "content-type": "text/plain" },
+    });
   }
 
   // 2. STEDI Forwarding

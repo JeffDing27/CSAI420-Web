@@ -16,37 +16,45 @@ export async function getConsent(customer: string): Promise<boolean> {
   return value === "true" || value === true;
 }
 
-export async function setConsentedClinician(customer: string, clinicianUsername: string) {
+export async function setConsentedClinician(
+  customer: string,
+  clinicianUsername: string,
+) {
   const key = `clinicians:${customer}`;
-  let clinicians: ClinicianConsent[] = (await kvGet<ClinicianConsent[]>(key)) || [];
-  
+  const clinicians: ClinicianConsent[] =
+    (await kvGet<ClinicianConsent[]>(key)) || [];
+
   const expirationDate = new Date();
   expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-  
-  const formattedDate = expirationDate.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true
+
+  const formattedDate = expirationDate.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
   });
-  
-  const existingIndex = clinicians.findIndex(c => c.clinicianUsername === clinicianUsername);
+
+  const existingIndex = clinicians.findIndex(
+    (c) => c.clinicianUsername === clinicianUsername,
+  );
   if (existingIndex !== -1) {
     clinicians[existingIndex].consentExpirationDate = formattedDate;
   } else {
     clinicians.push({
       clinicianUsername,
-      consentExpirationDate: formattedDate
+      consentExpirationDate: formattedDate,
     });
   }
-  
+
   await kvSet(key, clinicians);
 }
 
-export async function getConsentedClinicians(customer: string): Promise<ClinicianConsent[]> {
+export async function getConsentedClinicians(
+  customer: string,
+): Promise<ClinicianConsent[]> {
   const key = `clinicians:${customer}`;
   const clinicians = await kvGet<ClinicianConsent[]>(key);
   return clinicians || [];

@@ -1,4 +1,4 @@
-import { it, describe, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/user/route";
 import * as kvStore from "@/utils/kv-store";
 import * as passThrough from "@/utils/pass-through";
@@ -45,7 +45,11 @@ describe("POST /user", () => {
   });
 
   it("validates input - weak password returns 400", async () => {
-    const payload = { ...validPayload, password: "short", verifyPassword: "short" };
+    const payload = {
+      ...validPayload,
+      password: "short",
+      verifyPassword: "short",
+    };
     const res = await POST(createRequest(payload));
     expect(res.status).toBe(400);
     const json = await res.json();
@@ -53,7 +57,10 @@ describe("POST /user", () => {
   });
 
   it("validates input - password mismatch returns 400", async () => {
-    const payload = { ...validPayload, verifyPassword: "DifferentPassword123!" };
+    const payload = {
+      ...validPayload,
+      verifyPassword: "DifferentPassword123!",
+    };
     const res = await POST(createRequest(payload));
     expect(res.status).toBe(400);
     const json = await res.json();
@@ -62,7 +69,7 @@ describe("POST /user", () => {
 
   it("STEDI forwarding - valid account creation returns STEDI response", async () => {
     (passThrough.forwardRequest as any).mockResolvedValueOnce(
-      new Response("User created", { status: 200 })
+      new Response("User created", { status: 200 }),
     );
 
     const res = await POST(createRequest(validPayload));
@@ -74,7 +81,7 @@ describe("POST /user", () => {
 
   it("STEDI forwarding - external service failure returns 502", async () => {
     (passThrough.forwardRequest as any).mockResolvedValueOnce(
-      new Response("Internal Server Error", { status: 500 })
+      new Response("Internal Server Error", { status: 500 }),
     );
 
     const res = await POST(createRequest(validPayload));
@@ -98,7 +105,7 @@ describe("POST /user", () => {
       expect.objectContaining({
         email: "test@example.com",
         userName: "TestUser",
-      })
+      }),
     );
 
     const setArg = (kvStore.kvSet as any).mock.calls[0][1];

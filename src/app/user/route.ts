@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
-import { forwardRequest } from "@/utils/pass-through";
-import { kvGet, kvSet } from "@/utils/kv-store";
 import crypto from "crypto";
+import { NextResponse } from "next/server";
+import { AuthService } from "@/lib/service/auth.service";
+import { kvGet, kvSet } from "@/utils/kv-store";
+import { forwardRequest } from "@/utils/pass-through";
 
 const getCorsHeaders = () => {
   return {
@@ -25,60 +26,68 @@ export async function POST(request: Request) {
   } catch (err) {
     return NextResponse.json(
       { error: "Invalid JSON body" },
-      { status: 400, headers: getCorsHeaders() }
+      { status: 400, headers: getCorsHeaders() },
     );
   }
 
   // 1. Validate Input
-  const { userName, email, password, verifyPassword, birthDate, phone, region } = payload;
-  
+  const {
+    userName,
+    email,
+    password,
+    verifyPassword,
+    birthDate,
+    phone,
+    region,
+  } = payload;
+
   if (!userName || typeof userName !== "string") {
-    return NextResponse.json({ error: "Missing or invalid userName" }, { status: 400, headers: getCorsHeaders() });
+    return NextResponse.json(
+      { error: "Missing or invalid userName" },
+      { status: 400, headers: getCorsHeaders() },
+    );
   }
   if (!email || typeof email !== "string" || !email.includes("@")) {
-    return NextResponse.json({ error: "Missing or invalid email" }, { status: 400, headers: getCorsHeaders() });
+    return NextResponse.json(
+      { error: "Missing or invalid email" },
+      { status: 400, headers: getCorsHeaders() },
+    );
   }
   if (!password || typeof password !== "string" || password.length < 8) {
-    return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400, headers: getCorsHeaders() });
+    return NextResponse.json(
+      { error: "Password must be at least 8 characters" },
+      { status: 400, headers: getCorsHeaders() },
+    );
   }
   if (password !== verifyPassword) {
-    return NextResponse.json({ error: "Passwords do not match" }, { status: 400, headers: getCorsHeaders() });
+    return NextResponse.json(
+      { error: "Passwords do not match" },
+      { status: 400, headers: getCorsHeaders() },
+    );
   }
   if (!birthDate || typeof birthDate !== "string") {
-    return NextResponse.json({ error: "Missing or invalid birthDate" }, { status: 400, headers: getCorsHeaders() });
+    return NextResponse.json(
+      { error: "Missing or invalid birthDate" },
+      { status: 400, headers: getCorsHeaders() },
+    );
   }
-  
+
   const normalizedEmail = email.trim().toLowerCase();
 
   // 2. Local Fallback Mode
   if (process.env.USE_LOCAL_USER_STORE === "true") {
-    const existingUser = await kvGet(`user:${normalizedEmail}`);
-    if (existingUser) {
-      return NextResponse.json({ error: "User already exists" }, { status: 409, headers: getCorsHeaders() });
+    const { user, error } = await AuthService.signup(payload);
+
+    if (error) {
+      return NextResponse.json(
+        { error },
+        { status: 409, headers: getCorsHeaders() },
+      );
     }
-
-    const salt = crypto.randomBytes(16).toString("hex");
-    const passwordHash = crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
-
-    const sanitizedUser = {
-      userName,
-      email: normalizedEmail,
-      birthDate,
-      phone,
-      region,
-      passwordHash,
-      passwordSalt: salt,
-      agreedToTermsOfUseDate: payload.agreedToTermsOfUseDate,
-      agreedToCookiePolicyDate: payload.agreedToCookiePolicyDate,
-      agreedToPrivacyPolicyDate: payload.agreedToPrivacyPolicyDate,
-      agreedToTextMessageDate: payload.agreedToTextMessageDate,
-    };
-
-    await kvSet(`user:${normalizedEmail}`, sanitizedUser);
 
     return NextResponse.json(
       { message: "User created successfully", email: normalizedEmail },
-      { status: 200, headers: getCorsHeaders() }
+      { status: 200, headers: getCorsHeaders() },
     );
   }
 
@@ -94,7 +103,7 @@ export async function POST(request: Request) {
   // Add CORS headers to the response we're proxying
   const finalHeaders = new Headers(stediResponse.headers);
   const cors = getCorsHeaders();
-  Object.keys(cors).forEach(key => {
+  Object.keys(cors).forEach((key) => {
     finalHeaders.set(key, cors[key as keyof typeof cors]);
   });
 
@@ -105,15 +114,27 @@ export async function POST(request: Request) {
     // However, if we parse it and it says "already exists" we could do 409, but let's default to 502.
     // We already check in pass-through for "Error creating customer" giving 409, maybe we do the same?
     const responseText = await stediResponse.text();
-    if (responseText.toLowerCase().includes("exists") || responseText.toLowerCase().includes("duplicate")) {
-      return new Response("User already exists", { status: 409, headers: finalHeaders });
+    if (
+      responseText.toLowerCase().includes("exists") ||
+      responseText.toLowerCase().includes("duplicate")
+    ) {
+      return new Response("User already exists", {
+        status: 409,
+        headers: finalHeaders,
+      });
     }
-    
-    return new Response("Upstream service unavailable", { status: 502, headers: finalHeaders });
+
+    return new Response("Upstream service unavailable", {
+      status: 502,
+      headers: finalHeaders,
+    });
   }
-  
+
   if (stediResponse.status === 409) {
-    return new Response("User already exists", { status: 409, headers: finalHeaders });
+    return new Response("User already exists", {
+      status: 409,
+      headers: finalHeaders,
+    });
   }
 
   // For 200 OK or other responses from STEDI

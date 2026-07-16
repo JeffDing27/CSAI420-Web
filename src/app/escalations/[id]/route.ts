@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server';
-import { hasAuth } from '@/utils/auth';
-import { updateEscalationStatus, getEscalation } from '@/utils/escalation-store';
+import { NextResponse } from "next/server";
+import { hasAuth } from "@/utils/auth";
+import { EscalationService } from "@/services/escalation.service";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   if (!hasAuth(request)) {
     return new Response("Unauthorized", { status: 401 });
@@ -20,16 +20,20 @@ export async function PATCH(
   }
 
   const { status } = body;
-  if (!status || !['escalated', 'assigned', 'resolved'].includes(status)) {
+  if (!status || !["escalated", "assigned", "resolved"].includes(status)) {
     return new Response("Invalid or missing status", { status: 400 });
   }
 
-  const esc = await getEscalation(id);
+  const service = new EscalationService();
+  const esc = await service.getEscalation(id);
   if (!esc) {
     return new Response("Escalation not found", { status: 404 });
   }
 
-  await updateEscalationStatus(id, status);
+  await service.updateEscalationStatus(id, status);
 
-  return NextResponse.json({ message: "Status updated successfully" }, { status: 200 });
+  return NextResponse.json(
+    { message: "Status updated successfully" },
+    { status: 200 },
+  );
 }

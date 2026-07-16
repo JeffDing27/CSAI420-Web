@@ -1,11 +1,11 @@
-import { resetKvFallback } from '@/utils/kv-store'
-import { afterAll, beforeAll } from 'vitest'
-import { loadEnvConfig } from '@next/env'
+import { loadEnvConfig } from "@next/env";
+import { afterAll, beforeAll } from "vitest";
+import { resetKvFallback } from "@/utils/kv-store";
 
 beforeAll(() => {
-  loadEnvConfig(process.cwd())
-})
+  loadEnvConfig(process.cwd());
+});
 
 afterAll(() => {
-  resetKvFallback()
-})
+  resetKvFallback();
+});

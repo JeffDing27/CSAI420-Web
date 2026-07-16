@@ -1,3 +1,5 @@
+import { EscalationService } from "@/services/escalation.service";
+
 export interface Escalation {
   escalationId: string;
   userId: string;
@@ -5,44 +7,46 @@ export interface Escalation {
   phoneNumber?: string;
   question: string;
   aiResponse: string;
-  responsePreference: 'call' | 'text' | 'chat';
-  priority: 'high' | 'medium' | 'low';
-  category: 'medical' | 'technical' | 'general';
-  status: 'escalated' | 'assigned' | 'resolved';
+  responsePreference: "call" | "text" | "chat";
+  priority: "high" | "medium" | "low";
+  category: "medical" | "technical" | "general";
+  status: "escalated" | "assigned" | "resolved";
   escalationTimestamp: string;
   estimatedResponseTime: string;
 }
 
-import { kvGet, kvSet } from "./kv-store";
+const service = new EscalationService();
+
+function mapFromPrisma(esc: any): Escalation {
+  return {
+    ...esc,
+    escalationTimestamp: esc.escalationTimestamp.toISOString(),
+  };
+}
 
 export async function addEscalation(escalation: Escalation): Promise<void> {
-  await kvSet(`escalation:${escalation.escalationId}`, escalation);
-  
-  // Update index for listing
-  const indexKey = 'escalationIndex';
-  let index = (await kvGet<string[]>(indexKey)) || [];
-  index.unshift(escalation.escalationId);
-  await kvSet(indexKey, index);
+  await service.createEscalation({
+    ...escalation,
+    escalationTimestamp: new Date(escalation.escalationTimestamp),
+  } as any);
 }
 
-export async function getEscalation(escalationId: string): Promise<Escalation | null> {
-  return kvGet<Escalation>(`escalation:${escalationId}`);
+export async function getEscalation(
+  escalationId: string,
+): Promise<Escalation | null> {
+  const esc = await service.getEscalation(escalationId);
+  if (!esc) return null;
+  return mapFromPrisma(esc);
 }
 
-export async function updateEscalationStatus(escalationId: string, status: Escalation['status']): Promise<void> {
-  const esc = await getEscalation(escalationId);
-  if (esc) {
-    esc.status = status;
-    await kvSet(`escalation:${escalationId}`, esc);
-  }
+export async function updateEscalationStatus(
+  escalationId: string,
+  status: Escalation["status"],
+): Promise<void> {
+  await service.updateEscalationStatus(escalationId, status);
 }
 
 export async function listEscalations(): Promise<Escalation[]> {
-  const index = (await kvGet<string[]>('escalationIndex')) || [];
-  const results: Escalation[] = [];
-  for (const id of index) {
-    const esc = await getEscalation(id);
-    if (esc) results.push(esc);
-  }
-  return results;
+  const escs = await service.getEscalations();
+  return escs.map(mapFromPrisma);
 }
