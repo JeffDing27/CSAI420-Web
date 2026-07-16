@@ -1,0 +1,7 @@
+{
+  "name": "process-escalation",
+  "version": "1.0.0",
+  "description": "SQS Worker for STEDI Escalations",
+  "main": "app.js",
+  "dependencies": {}
+}
