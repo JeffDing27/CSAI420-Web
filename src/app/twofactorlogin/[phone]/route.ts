@@ -10,10 +10,15 @@ export async function OPTIONS() {
   return new Response(null, { headers: getCorsHeaders() });
 }
 
-export async function POST(request: Request, { params }: { params: { phone: string } }) {
+export async function POST(_request: Request) {
   if (process.env.USE_LOCAL_USER_STORE === "true") {
-    // Simulated behavior for prototype compatibility
-    return new Response("OK", { status: 200, headers: { ...getCorsHeaders(), "content-type": "text/plain" } });
+    return new Response("OK", {
+      status: 200,
+      headers: { ...getCorsHeaders(), "content-type": "text/plain" },
+    });
   }
-  return NextResponse.json({ error: "Not implemented for proxy" }, { status: 501, headers: getCorsHeaders() });
+  return NextResponse.json(
+    { error: "Not implemented for proxy" },
+    { status: 501, headers: getCorsHeaders() },
+  );
 }
