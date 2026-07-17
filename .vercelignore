@@ -1,0 +1,6 @@
+.env
+.env.*
+!.env.example
+.git.incomplete-backup*
+node_modules
+coverage
