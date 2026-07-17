@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import type { ChatSession } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import type { ChatSessionRepository } from "../interfaces";
 
 export class PrismaChatSessionRepository implements ChatSessionRepository {
@@ -9,7 +9,9 @@ export class PrismaChatSessionRepository implements ChatSessionRepository {
     });
   }
 
-  async upsert(session: Omit<ChatSession, "createdAt" | "updatedAt">): Promise<ChatSession> {
+  async upsert(
+    session: Omit<ChatSession, "createdAt" | "updatedAt">,
+  ): Promise<ChatSession> {
     return prisma.chatSession.upsert({
       where: { id: session.id },
       update: {

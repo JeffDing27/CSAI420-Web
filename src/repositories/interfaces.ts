@@ -1,10 +1,10 @@
 import {
   AuditEvent,
   type AuthSession,
-  ChatMessage,
+  type ChatMessage,
   type ChatSession,
   type ClinicianAccessRequest,
-  CoachResponse,
+  type CoachResponse,
   type Consent,
   type ConsentedClinician,
   type CustomerReference,
@@ -86,7 +86,9 @@ export interface EscalationRepository {
 
 export interface ChatSessionRepository {
   findById(id: string): Promise<ChatSession | null>;
-  upsert(session: Omit<ChatSession, "createdAt" | "updatedAt">): Promise<ChatSession>;
+  upsert(
+    session: Omit<ChatSession, "createdAt" | "updatedAt">,
+  ): Promise<ChatSession>;
   delete(id: string): Promise<void>;
 }
 
@@ -96,7 +98,9 @@ export interface ChatMessageRepository {
 }
 
 export interface CoachResponseRepository {
-  create(response: Omit<CoachResponse, "id" | "createdAt">): Promise<CoachResponse>;
+  create(
+    response: Omit<CoachResponse, "id" | "createdAt">,
+  ): Promise<CoachResponse>;
   findByEscalationId(escalationId: string): Promise<CoachResponse[]>;
 }
 

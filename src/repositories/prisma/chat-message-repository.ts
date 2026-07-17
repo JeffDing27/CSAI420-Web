@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import type { ChatMessage } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import type { ChatMessageRepository } from "../interfaces";
 
 export class PrismaChatMessageRepository implements ChatMessageRepository {

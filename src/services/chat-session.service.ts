@@ -1,5 +1,5 @@
-import { RepositoryFactory } from "@/repositories/provider-factory";
 import type { ChatSession } from "@prisma/client";
+import { RepositoryFactory } from "@/repositories/provider-factory";
 
 export class ChatSessionService {
   private repo = RepositoryFactory.getChatSessionRepository();
@@ -22,7 +22,9 @@ export class ChatSessionService {
     });
   }
 
-  async upsertSession(session: Omit<ChatSession, "createdAt" | "updatedAt">): Promise<ChatSession> {
+  async upsertSession(
+    session: Omit<ChatSession, "createdAt" | "updatedAt">,
+  ): Promise<ChatSession> {
     return this.repo.upsert(session);
   }
 

@@ -3,6 +3,28 @@ import { POST as ContinueSession } from "@/app/chat/continue-session/route";
 import { POST as EscalateRegistration } from "@/app/escalate-registration/route";
 import { POST as ChatAssisted } from "@/app/user/chat-assisted/route";
 import { resetKvFallback } from "@/utils/kv-store";
+import { vi } from "vitest";
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    escalation: {
+      upsert: vi.fn(),
+    },
+    chatSession: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockResolvedValue({ id: "test", sessionActive: true, context: {}, nextStep: "greeting" }),
+      update: vi.fn().mockImplementation(async ({ data, where }) => ({ id: where.id, sessionActive: true, context: data.context || {}, nextStep: data.nextStep || "greeting" })),
+      upsert: vi.fn().mockResolvedValue({ id: "test", sessionActive: true, context: {}, nextStep: "greeting" }),
+    },
+    user: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+    },
+    outboxEvent: {
+      create: vi.fn(),
+    }
+  }
+}));
 
 describe("Week 5: Chat-Assisted Registration", () => {
   afterEach(() => {

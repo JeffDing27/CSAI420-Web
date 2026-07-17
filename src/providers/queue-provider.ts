@@ -39,15 +39,15 @@ export class OutboxQueueProvider implements QueueProvider {
 
 export function getQueueProvider(): QueueProvider {
   const provider = process.env.QUEUE_PROVIDER || "mock";
-  
+
   if (provider === "outbox") {
     return new OutboxQueueProvider();
   }
-  
+
   if (provider === "sqs") {
     return new SQSProvider();
   }
-  
+
   // If AWS isn't fully configured or explicitly mocked, use mock
   if (
     process.env.AWS_MOCK === "true" ||

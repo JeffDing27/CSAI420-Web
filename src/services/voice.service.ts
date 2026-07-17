@@ -1,7 +1,7 @@
-import { VoiceSessionRepository } from "@/repositories/voice-session-repository";
-import { VoiceTestRepository } from "@/repositories/voice-test-repository";
 import type { VoiceSession, VoiceTest } from "@prisma/client";
 import { VoiceStage } from "@prisma/client";
+import { VoiceSessionRepository } from "@/repositories/voice-session-repository";
+import { VoiceTestRepository } from "@/repositories/voice-test-repository";
 
 export class VoiceService {
   private sessionRepo = new VoiceSessionRepository();
@@ -16,7 +16,7 @@ export class VoiceService {
 
   async startSession(callSid: string): Promise<VoiceSession> {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    
+
     if (process.env.NODE_ENV === "test") {
       return { callSid, stage: VoiceStage.INITIAL, expiresAt } as VoiceSession;
     }
@@ -36,7 +36,9 @@ export class VoiceService {
 
   async updateSession(
     callSid: string,
-    updates: Partial<Omit<VoiceSession, "id" | "callSid" | "createdAt" | "updatedAt">>
+    updates: Partial<
+      Omit<VoiceSession, "id" | "callSid" | "createdAt" | "updatedAt">
+    >,
   ): Promise<VoiceSession> {
     if (process.env.NODE_ENV === "test") {
       return { callSid, ...updates } as VoiceSession;
@@ -46,23 +48,29 @@ export class VoiceService {
     if (!session) {
       throw new Error("Session not found");
     }
-    
+
     return this.sessionRepo.upsert({
       ...session,
       ...updates,
     });
   }
 
-  async recordTest(callSid: string, userId: string | null, email: string, status: string, testData: any) {
+  async recordTest(
+    callSid: string,
+    userId: string | null,
+    email: string,
+    status: string,
+    testData: any,
+  ) {
     if (process.env.NODE_ENV === "test") return;
-    
+
     await this.testRepo.upsert({
       callSid,
       userId,
       email,
       status,
       testData,
-      completedAt: new Date()
+      completedAt: new Date(),
     });
   }
 }

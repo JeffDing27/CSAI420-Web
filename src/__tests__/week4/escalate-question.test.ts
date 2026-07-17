@@ -3,6 +3,34 @@ import { POST } from "@/app/escalate-question/route";
 import { getEscalation } from "@/utils/escalation-store";
 import { resetKvFallback } from "@/utils/kv-store";
 
+const mockDb: any = {};
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    escalation: {
+      upsert: vi.fn().mockImplementation(async ({ where, update, create }) => {
+        mockDb[where.escalationId] = create;
+        return create;
+      }),
+      findUnique: vi.fn().mockImplementation(async ({ where }) => {
+        return mockDb[where.escalationId] || null;
+      }),
+    },
+    chatSession: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      upsert: vi.fn(),
+    },
+    user: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+    },
+    outboxEvent: {
+      create: vi.fn(),
+    }
+  }
+}));
+
 describe("Week 4: Escalate Question", () => {
   const mockToken = "test-token";
 

@@ -1,5 +1,5 @@
-import { RepositoryFactory } from "@/repositories/provider-factory";
 import type { CoachResponse } from "@prisma/client";
+import { RepositoryFactory } from "@/repositories/provider-factory";
 
 export class CoachResponseService {
   private repo = RepositoryFactory.getCoachResponseRepository();
@@ -8,7 +8,9 @@ export class CoachResponseService {
     return this.repo.findByEscalationId(escalationId);
   }
 
-  async addResponse(response: Omit<CoachResponse, "id" | "createdAt">): Promise<CoachResponse> {
+  async addResponse(
+    response: Omit<CoachResponse, "id" | "createdAt">,
+  ): Promise<CoachResponse> {
     return this.repo.create(response);
   }
 }

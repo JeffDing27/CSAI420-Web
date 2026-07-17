@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import type { Consent } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import type { ConsentRepository } from "../interfaces";
 
 export class PrismaConsentRepository implements ConsentRepository {

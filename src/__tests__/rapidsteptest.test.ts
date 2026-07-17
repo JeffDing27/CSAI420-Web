@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { RapidStepTestService } from "@/services/rapid-step-test.service";
+import { beforeEach, describe, expect, it } from "vitest";
 import { RepositoryFactory } from "@/repositories/provider-factory";
+import { RapidStepTestService } from "@/services/rapid-step-test.service";
 
 describe("RapidStepTest Service", () => {
   const service = new RapidStepTestService();
@@ -36,7 +36,7 @@ describe("RapidStepTest Service", () => {
     expect(test.id).toBeDefined();
     expect(test.userId).toBe(testUserId);
     expect(test.externalTestId).toBe("ext_123");
-    
+
     // Retrieve the test
     const retrieved = await service.getTestById(test.id);
     expect(retrieved).not.toBeNull();

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { VoiceService } from "@/services/voice.service";
 import twilio from "twilio";
+import { VoiceService } from "@/services/voice.service";
 
 const { VoiceResponse } = twilio.twiml;
 const voiceService = new VoiceService();

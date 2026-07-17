@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import type { CoachResponse } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import type { CoachResponseRepository } from "../interfaces";
 
 export class PrismaCoachResponseRepository implements CoachResponseRepository {

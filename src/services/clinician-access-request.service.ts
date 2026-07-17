@@ -1,5 +1,5 @@
-import { RepositoryFactory } from "@/repositories/provider-factory";
 import type { ClinicianAccessRequest } from "@prisma/client";
+import { RepositoryFactory } from "@/repositories/provider-factory";
 
 export class ClinicianAccessRequestService {
   private repo = RepositoryFactory.getClinicianAccessRequestRepository();
@@ -8,7 +8,10 @@ export class ClinicianAccessRequestService {
     return this.repo.findByCustomer(customerEmail);
   }
 
-  async addRequest(customerEmail: string, clinicianUsername: string): Promise<ClinicianAccessRequest> {
+  async addRequest(
+    customerEmail: string,
+    clinicianUsername: string,
+  ): Promise<ClinicianAccessRequest> {
     return this.repo.create({
       customerEmail,
       clinicianUsername,
@@ -17,7 +20,10 @@ export class ClinicianAccessRequestService {
     });
   }
 
-  async deleteRequest(customerEmail: string, clinicianUsername: string): Promise<boolean> {
+  async deleteRequest(
+    customerEmail: string,
+    clinicianUsername: string,
+  ): Promise<boolean> {
     return this.repo.delete(customerEmail, clinicianUsername);
   }
 }

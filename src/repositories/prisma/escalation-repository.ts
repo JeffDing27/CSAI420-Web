@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import type { Escalation } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import type { EscalationRepository } from "../interfaces";
 
 export class PrismaEscalationRepository implements EscalationRepository {
@@ -25,7 +25,10 @@ export class PrismaEscalationRepository implements EscalationRepository {
     });
   }
 
-  async update(id: string, escalation: Partial<Escalation>): Promise<Escalation> {
+  async update(
+    id: string,
+    escalation: Partial<Escalation>,
+  ): Promise<Escalation> {
     return prisma.escalation.update({
       where: { escalationId: id },
       data: escalation,

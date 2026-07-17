@@ -100,7 +100,7 @@ export default function ModeratorPage() {
         }),
       });
       if (!res.ok) throw new Error("Send response failed");
-      
+
       // Auto-resolve escalation
       await handleStatusChange(id, "RESOLVED");
     } catch (e: any) {
@@ -193,7 +193,7 @@ export default function ModeratorPage() {
                       <option value="ASSIGNED">Assigned</option>
                       <option value="RESOLVED">Resolved</option>
                     </select>
-                    
+
                     <select
                       className="border rounded p-1 text-sm text-gray-700"
                       value={esc.coachId || ""}
@@ -201,15 +201,24 @@ export default function ModeratorPage() {
                         handleAssignCoach(esc.escalationId, e.target.value)
                       }
                     >
-                      <option value="" disabled>Assign Coach</option>
-                      {COACHES.map(coach => (
-                        <option key={coach.id} value={coach.id}>{coach.name}</option>
+                      <option value="" disabled>
+                        Assign Coach
+                      </option>
+                      {COACHES.map((coach) => (
+                        <option key={coach.id} value={coach.id}>
+                          {coach.name}
+                        </option>
                       ))}
                     </select>
 
                     <button
                       className="bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                      onClick={() => handleSendResponse(esc.escalationId, esc.responsePreference || "in-app")}
+                      onClick={() =>
+                        handleSendResponse(
+                          esc.escalationId,
+                          esc.responsePreference || "in-app",
+                        )
+                      }
                     >
                       Reply ({esc.responsePreference || "in-app"})
                     </button>

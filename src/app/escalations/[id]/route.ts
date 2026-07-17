@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { hasAuth } from "@/utils/auth";
 import { EscalationService } from "@/services/escalation.service";
+import { hasAuth } from "@/utils/auth";
 
 export async function PATCH(
   request: Request,

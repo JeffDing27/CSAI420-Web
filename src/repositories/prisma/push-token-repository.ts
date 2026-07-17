@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import type { PushToken } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import type { PushTokenRepository } from "../interfaces";
 
 export class PrismaPushTokenRepository implements PushTokenRepository {
@@ -11,7 +11,11 @@ export class PrismaPushTokenRepository implements PushTokenRepository {
     return prisma.pushToken.findMany({ where: { userId } });
   }
 
-  async upsert(userId: string, platform: string, token: string): Promise<PushToken> {
+  async upsert(
+    userId: string,
+    platform: string,
+    token: string,
+  ): Promise<PushToken> {
     return prisma.pushToken.upsert({
       where: { token },
       update: { userId, platform, active: true },

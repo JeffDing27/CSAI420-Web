@@ -5,14 +5,16 @@ import { prisma } from "@/lib/prisma";
 // needs to send these messages to SQS to process them, OR we can
 // simulate processing based on the eventType.
 // According to requirements: "Implement PostgreSQL OutboxEvent processor (/api/internal/process-outbox) as the default queue system, preserving AwsSqsProvider for course compliance."
-import { SQSProvider, MockQueueProvider } from "@/providers/queue-provider";
+import { MockQueueProvider, SQSProvider } from "@/providers/queue-provider";
 
 export async function POST(request: Request) {
   // In a real app, this endpoint would be protected (e.g. by a secret header)
   // to ensure only a cron job or internal service can call it.
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.INTERNAL_CRON_SECRET || "dev-secret"}`) {
-    // For local testing, we might allow it if no secret is configured, 
+  if (
+    authHeader !== `Bearer ${process.env.INTERNAL_CRON_SECRET || "dev-secret"}`
+  ) {
+    // For local testing, we might allow it if no secret is configured,
     // but typically we should enforce it. We'll allow it for now.
     // return new Response("Unauthorized", { status: 401 });
   }
@@ -36,9 +38,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ processed: 0, message: "No pending events" });
     }
 
-    const provider = process.env.AWS_MOCK === "true" || !process.env.AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID === "dummy_key"
-      ? new MockQueueProvider() 
-      : new SQSProvider();
+    const provider =
+      process.env.AWS_MOCK === "true" ||
+      !process.env.AWS_ACCESS_KEY_ID ||
+      process.env.AWS_ACCESS_KEY_ID === "dummy_key"
+        ? new MockQueueProvider()
+        : new SQSProvider();
 
     let processedCount = 0;
 
@@ -58,7 +63,7 @@ export async function POST(request: Request) {
         // In our architecture, the Outbox is a durable local store that forwards to the real queue (SQS or Mock)
         // Or it could directly handle business logic. The plan says: "process OutboxEvent as the default queue system, preserving AwsSqsProvider"
         // So we forward to the "real" queue provider (AWS SQS or Mock).
-        
+
         await provider.sendMessage(event.eventType, event.payload);
 
         // 4. Mark as completed
@@ -70,7 +75,6 @@ export async function POST(request: Request) {
           },
         });
         processedCount++;
-
       } catch (error: any) {
         // 5. Handle failure
         const hasMoreAttempts = event.attempts + 1 < event.maxAttempts;
@@ -80,16 +84,18 @@ export async function POST(request: Request) {
             status: hasMoreAttempts ? "PENDING" : "FAILED",
             lastError: error.message || "Unknown error",
             // Exponential backoff: retry in 2^attempts minutes
-            availableAt: hasMoreAttempts 
-              ? new Date(Date.now() + Math.pow(2, event.attempts) * 60000) 
+            availableAt: hasMoreAttempts
+              ? new Date(Date.now() + 2 ** event.attempts * 60000)
               : event.availableAt,
           },
         });
       }
     }
 
-    return NextResponse.json({ processed: processedCount, totalFound: pendingEvents.length });
-
+    return NextResponse.json({
+      processed: processedCount,
+      totalFound: pendingEvents.length,
+    });
   } catch (error: any) {
     console.error("Outbox processing error:", error);
     return new Response("Internal Server Error", { status: 500 });

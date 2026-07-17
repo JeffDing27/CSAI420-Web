@@ -1,9 +1,13 @@
-import { prisma } from "@/lib/prisma";
 import type { ClinicianAccessRequest } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import type { ClinicianAccessRequestRepository } from "../interfaces";
 
-export class PrismaClinicianAccessRequestRepository implements ClinicianAccessRequestRepository {
-  async findByCustomer(customerEmail: string): Promise<ClinicianAccessRequest[]> {
+export class PrismaClinicianAccessRequestRepository
+  implements ClinicianAccessRequestRepository
+{
+  async findByCustomer(
+    customerEmail: string,
+  ): Promise<ClinicianAccessRequest[]> {
     return prisma.clinicianAccessRequest.findMany({
       where: { customerEmail },
     });
@@ -17,14 +21,20 @@ export class PrismaClinicianAccessRequestRepository implements ClinicianAccessRe
     });
   }
 
-  async updateStatus(id: string, status: string): Promise<ClinicianAccessRequest> {
+  async updateStatus(
+    id: string,
+    status: string,
+  ): Promise<ClinicianAccessRequest> {
     return prisma.clinicianAccessRequest.update({
       where: { id },
       data: { status },
     });
   }
 
-  async delete(customerEmail: string, clinicianUsername: string): Promise<boolean> {
+  async delete(
+    customerEmail: string,
+    clinicianUsername: string,
+  ): Promise<boolean> {
     const deleted = await prisma.clinicianAccessRequest.deleteMany({
       where: { customerEmail, clinicianUsername },
     });

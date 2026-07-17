@@ -6,6 +6,13 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  PATIENT
+  CLINICIAN
+  MODERATOR
+  ADMIN
+}
+
 model User {
   id             String   @id @default(uuid())
   userName       String   @unique
@@ -18,6 +25,7 @@ model User {
   passwordHash   String
   passwordSalt   String
   externalUserId String?
+  role           Role     @default(PATIENT)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

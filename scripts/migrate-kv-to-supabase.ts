@@ -1,7 +1,9 @@
 // Dry-run migration script from KV to Supabase
 
-import { randomUUID } from "crypto";
-import { prisma } from "../src/lib/prisma";
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
+import { randomUUID } from "node:crypto";
 import { kvGet } from "../src/utils/kv-store";
 
 // Execute in dry-run by default unless passed `--execute`
@@ -18,12 +20,13 @@ async function migrateUsers() {
   let migrated = 0;
   for (const email of knownEmails) {
     const key = `user:${email.toLowerCase()}`;
-    const kvUser = await kvGet<any>(key);
+    const kvUser = await kvGet(key) as any;
 
     if (kvUser) {
       if (isDryRun) {
         console.log(`[DRY RUN] Would migrate user ${email}`);
       } else {
+        const { prisma } = await import("../src/lib/prisma");
         await prisma.user.upsert({
           where: { email: email.toLowerCase() },
           update: {

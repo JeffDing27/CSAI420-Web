@@ -1,8 +1,10 @@
-import { prisma } from "@/lib/prisma";
 import type { CustomerReference } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import type { CustomerReferenceRepository } from "../interfaces";
 
-export class PrismaCustomerReferenceRepository implements CustomerReferenceRepository {
+export class PrismaCustomerReferenceRepository
+  implements CustomerReferenceRepository
+{
   async findById(id: string): Promise<CustomerReference | null> {
     return prisma.customerReference.findUnique({ where: { id } });
   }

@@ -10,8 +10,8 @@ let content = fs.readFileSync(file, "utf8");
 const match = content.match(/(-- CreateTable|CREATE )/i);
 if (match && match.index !== undefined) {
   content = content.substring(match.index);
-  fs.writeFileSync(file, content, 'utf8');
-  console.log('Fixed migration.sql');
+  fs.writeFileSync(file, content, "utf8");
+  console.log("Fixed migration.sql");
 } else {
   console.log("Could not find CREATE statement");
 }

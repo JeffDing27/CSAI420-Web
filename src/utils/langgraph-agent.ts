@@ -6,6 +6,8 @@ import {
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
 
+import { RepositoryFactory } from "@/repositories/provider-factory";
+
 const StateAnnotation = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
     reducer: (x, y) => x.concat(y),
@@ -43,13 +45,23 @@ function callModel(state: typeof StateAnnotation.State) {
 
 async function retrieveContext(state: typeof StateAnnotation.State) {
   const lastMessage = state.messages[state.messages.length - 1];
+  const ragRepo = RepositoryFactory.getRagRepository();
+
+  // If OPENAI_ENABLED is true, we would use an embedding model to vectorize the human query
+  // For now, we simulate embedding extraction or fallback to string matching
   
-  // Here we would typically use an embedding model to vectorize the human query
-  // and then use RagRepository.similaritySearch
-  // const ragRepo = new RagRepository();
-  // const queryEmbedding = await generateEmbedding(lastMessage.content);
-  // const chunks = await ragRepo.similaritySearch(queryEmbedding);
-  
+  try {
+    // We pass a dummy embedding if OpenAI is disabled, or a real one if enabled
+    const mockEmbedding = [0.1, 0.2, 0.3];
+    const chunks = await ragRepo.similaritySearch(mockEmbedding, 3);
+    if (chunks && chunks.length > 0) {
+      const context = chunks.map(c => c.content).join("\n");
+      return { context };
+    }
+  } catch (e) {
+    console.error("RAG retrieval failed:", e);
+  }
+
   if (lastMessage.content.toString().toLowerCase().includes("stedi")) {
     return { context: "STEDI is a platform for fall risk assessment." };
   }

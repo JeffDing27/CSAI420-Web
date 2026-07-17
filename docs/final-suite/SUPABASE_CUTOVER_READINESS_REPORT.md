@@ -1,33 +1,28 @@
-# SUPABASE CUTOVER READINESS REPORT
+# Supabase Cutover Readiness Report
 
-**Status**: NOT READY FOR CUTOVER
-**Gate**: CLOSED (`CUTOVER_GATE_OPEN=false`)
+This report evaluates the readiness of the STEDI product to transition from Dual-Write (KV + Supabase) to Supabase-only architecture.
 
-## Verification Summary
+## Requirements Status
 
-### Phase 11-13: IVR System Migration
-- **Canonical API (`/api/voice-auth`)**: Built and handles Twilio IVR logic fully via Prisma/dual repositories. We corrected internal database model referencing issues (e.g. `CustomerReference.phone` vs `phoneNumber`).
-- **IVR Simulator**: The `test-ivr.ts` simulator correctly triggers Twilio paths but requires further UI stabilization due to `node-fetch` integration.
+- **Full entity-level dual-write verification:** PARTIALLY VERIFIED (Script covers only CustomerReference and PushToken)
+- **Real KV-data comparison:** NOT TESTED (Real KV credentials missing)
+- **Supabase-only smoke testing:** NOT TESTED
+- **Runtime operation without KV credentials:** NOT TESTED
+- **Mobile product completion:** PARTIALLY VERIFIED
+- **Mobile tests and exports:** NOT TESTED
+- **Clinician/provider portal:** PARTIALLY VERIFIED
+- **Complete moderator workflow:** PARTIALLY VERIFIED
+- **Full end-to-end product verification:** NOT TESTED
+- **Final KV runtime removal:** NOT TESTED
 
-### Phase 14: RAG & Chat Session Memory
-- Successfully mitigated TypeScript compilation failures stemming from Prisma JSON typings (`InputJsonValue`). Both RAG memories and User Sessions are safely transacting. 
-
-### Phase 15-16: Mobile Push Tokens & UX Check
-- **Push Tokens**: Still lacking fully complete local `/api/push-tokens` handlers for `update` and `delete`, preventing complete mobile coverage without relying on `dev.stedi.me`.
-- **Mobile Product**: Minor scroll issues were verified locally. But a full test connecting React Native Expo to local network is pending `PushToken` readiness.
-
-### Phase 17: Moderator Dashboard
-- Fixed compilation bugs regarding missing `update` methods in `EscalationRepository`.
-- Replaced mismatched enums (`ESCALATED` vs `PENDING`, `high` vs `HIGH`) ensuring the Prisma SDK matches the remote Supabase enums.
-- The Dashboard UI now effectively persists coach assignments via `PATCH /escalations/[id]`. 
-
-### Phase 18: Dual-Write Verification
-- **NOT RUN**: `scripts/verify-dual-writes.ts` could not be located in this branch, halting the direct data integrity comparison.
-- We cannot safely assume data identicality between Upstash Redis and Supabase Postgres without this synthetic runner. 
-
-## Action Items Blocking Phase 20
-1. Re-implement or locate `verify-dual-writes.ts` to execute a comprehensive read check on all dual-written models.
-2. Complete local push-token management backend logic.
-3. Test Mobile app against `EXPO_PUBLIC_API_URL=http://localhost:3000`.
-
-Due to these unverified properties, we **cannot** move to `STORAGE_PROVIDER=supabase` yet. We will remain in `dual` mode.
+## Action Items Before Cutover
+1. Expand `scripts/verify-dual-writes.ts` to cover all implemented dual-write entities.
+2. Complete Next.js provider portal with role-based access.
+3. Complete Moderator portal workflows.
+4. Complete all Mobile screens.
+5. Verify Push-Token migration (ensure all hard-coded URLs are parameterized).
+6. Complete RAG and Memory workflows using Supabase.
+7. Complete Twilio and SMS workflows.
+8. Complete Postgres Outbox verifications.
+9. Run dual-mode end-to-end test.
+10. Run temporary Supabase-only test.

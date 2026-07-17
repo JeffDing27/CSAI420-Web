@@ -1,17 +1,15 @@
 /**
  * test-ivr.ts
- * 
+ *
  * Simulates Twilio requests to the local webhook endpoints to test the IVR state machine
  * without needing real Twilio credentials or ngrok.
  */
-
-
 
 const API_URL = "http://localhost:3000/api/voice-auth";
 
 async function simulateTwilioRequest(
   endpoint: string,
-  params: Record<string, string>
+  params: Record<string, string>,
 ) {
   console.log(`\n--- Calling ${endpoint} ---`);
   console.log("Params:", params);
@@ -38,7 +36,7 @@ async function simulateTwilioRequest(
 
 async function runTest() {
   const callSid = "CA_simulate_1234567890";
-  
+
   // 1. Initial incoming call (INITIAL state)
   await simulateTwilioRequest("", {
     CallSid: callSid,

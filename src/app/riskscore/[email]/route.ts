@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ email: string }> },
 ) {
   const { email } = await params;
-  
+
   try {
     const score = await service.calculateRiskScore(email);
     return NextResponse.json({ score }, { status: 200 });

@@ -1,9 +1,9 @@
+import type { Escalation } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getQueueProvider } from "@/providers/queue-provider";
 import { getNotificationProvider } from "@/providers/twilio-provider";
-import { hasAuth } from "@/utils/auth";
 import { EscalationService } from "@/services/escalation.service";
-import type { Escalation } from "@prisma/client";
+import { hasAuth } from "@/utils/auth";
 
 export async function POST(request: Request) {
   if (!hasAuth(request)) {
@@ -58,8 +58,9 @@ export async function POST(request: Request) {
 
   // Generate ID and persist
   const escalationId = `esc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const estResponseTime = priority.toUpperCase() === "HIGH" ? "15-30 minutes" : "1-2 hours";
-  
+  const estResponseTime =
+    priority.toUpperCase() === "HIGH" ? "15-30 minutes" : "1-2 hours";
+
   const escalation: Omit<Escalation, "id" | "createdAt" | "updatedAt"> = {
     escalationId,
     userId: userId || "anonymous",

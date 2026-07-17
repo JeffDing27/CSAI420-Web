@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/prisma";
 import type { RapidStepTest } from "@prisma/client";
-import type { RapidStepTestRepository } from "../interfaces";
+import { prisma } from "@/lib/prisma";
 import { normalizeJson } from "@/utils/json-normalize";
+import type { RapidStepTestRepository } from "../interfaces";
 
 export class PrismaRapidStepTestRepository implements RapidStepTestRepository {
   async findById(id: string): Promise<RapidStepTest | null> {

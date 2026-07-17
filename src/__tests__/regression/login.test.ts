@@ -13,6 +13,17 @@ vi.mock("@/utils/pass-through", () => ({
   forwardRequest: vi.fn(),
 }));
 
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    authSession: {
+      create: vi.fn(),
+    },
+    user: {
+      findUnique: vi.fn(),
+    }
+  }
+}));
+
 function createRequest(body: any) {
   return new Request("http://localhost:3000/login", {
     method: "POST",

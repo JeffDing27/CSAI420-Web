@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { AuthenticationService } from "@/services/authentication-service";
+import { AuthService } from "@/lib/service/auth.service";
 import { PushTokenService } from "@/services/push-token.service";
 
-const authService = new AuthenticationService();
 const pushTokenService = new PushTokenService();
 
 export async function POST(req: Request) {
@@ -13,7 +12,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const session = await authService.verifySession(sessionId);
+    const session = await AuthService.validateSession(sessionId);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -51,7 +50,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const session = await authService.verifySession(sessionId);
+    const session = await AuthService.validateSession(sessionId);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -60,10 +59,7 @@ export async function DELETE(req: Request) {
     const token = searchParams.get("token");
 
     if (!token) {
-      return NextResponse.json(
-        { error: "Token is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Token is required" }, { status: 400 });
     }
 
     await pushTokenService.deactivateToken(token);
@@ -85,7 +81,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const session = await authService.verifySession(sessionId);
+    const session = await AuthService.validateSession(sessionId);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -1,14 +1,18 @@
-import { prisma } from "@/lib/prisma";
 import type { SmsConsentMessage } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export class SmsConsentMessageRepository {
-  async findByMessageSid(messageSid: string): Promise<SmsConsentMessage | null> {
+  async findByMessageSid(
+    messageSid: string,
+  ): Promise<SmsConsentMessage | null> {
     return prisma.smsConsentMessage.findUnique({
       where: { messageSid },
     });
   }
 
-  async upsert(msg: Omit<SmsConsentMessage, "id" | "createdAt" | "updatedAt">): Promise<SmsConsentMessage> {
+  async upsert(
+    msg: Omit<SmsConsentMessage, "id" | "createdAt" | "updatedAt">,
+  ): Promise<SmsConsentMessage> {
     return prisma.smsConsentMessage.upsert({
       where: { messageSid: msg.messageSid },
       update: {

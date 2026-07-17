@@ -1,7 +1,7 @@
+import type { Escalation } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getQueueProvider } from "@/providers/queue-provider";
 import { EscalationService } from "@/services/escalation.service";
-import type { Escalation } from "@prisma/client";
 
 export async function POST(request: Request) {
   let body;

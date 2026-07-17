@@ -20,6 +20,10 @@ const service = new EscalationService();
 function mapFromPrisma(esc: any): Escalation {
   return {
     ...esc,
+    priority: esc.priority?.toLowerCase(),
+    category: esc.category?.toLowerCase(),
+    status: esc.status === "PENDING" ? "escalated" : esc.status?.toLowerCase(),
+    responsePreference: esc.responsePreference?.toLowerCase(),
     escalationTimestamp: esc.escalationTimestamp.toISOString(),
   };
 }

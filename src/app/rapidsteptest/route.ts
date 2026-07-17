@@ -1,6 +1,6 @@
-import { RapidStepTestService } from "@/services/rapid-step-test.service";
-import { RepositoryFactory } from "@/repositories/provider-factory";
 import { NextResponse } from "next/server";
+import { RepositoryFactory } from "@/repositories/provider-factory";
+import { RapidStepTestService } from "@/services/rapid-step-test.service";
 
 const service = new RapidStepTestService();
 const userRepo = RepositoryFactory.getUserRepository();

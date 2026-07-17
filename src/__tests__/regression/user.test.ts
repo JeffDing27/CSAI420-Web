@@ -12,6 +12,23 @@ vi.mock("@/utils/pass-through", () => ({
   forwardRequest: vi.fn(),
 }));
 
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    user: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockImplementation(async ({ data }) => ({
+        id: "mock-id",
+        ...data
+      })),
+    },
+    customerReference: {
+      findFirst: vi.fn(),
+      upsert: vi.fn(),
+      create: vi.fn(),
+    }
+  }
+}));
+
 function createRequest(body: any, method = "POST") {
   return new Request("http://localhost:3000/user", {
     method,

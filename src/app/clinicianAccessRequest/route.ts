@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { hasAuth } from "@/utils/auth";
 import { ClinicianAccessRequestService } from "@/services/clinician-access-request.service";
+import { hasAuth } from "@/utils/auth";
 
 const service = new ClinicianAccessRequestService();
 
@@ -44,10 +44,7 @@ export async function DELETE(request: Request) {
     return new Response("Missing required fields", { status: 400 });
   }
 
-  const deleted = await service.deleteRequest(
-    customerEmail,
-    clinicianUsername,
-  );
+  const deleted = await service.deleteRequest(customerEmail, clinicianUsername);
 
   if (!deleted) {
     return new Response("Request not found", { status: 404 });

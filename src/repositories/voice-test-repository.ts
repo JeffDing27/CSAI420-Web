@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
 import type { VoiceTest } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export class VoiceTestRepository {
   async findByCallSid(callSid: string): Promise<VoiceTest | null> {
@@ -8,7 +8,9 @@ export class VoiceTestRepository {
     });
   }
 
-  async upsert(test: Omit<VoiceTest, "id" | "createdAt" | "updatedAt">): Promise<VoiceTest> {
+  async upsert(
+    test: Omit<VoiceTest, "id" | "createdAt" | "updatedAt">,
+  ): Promise<VoiceTest> {
     return prisma.voiceTest.upsert({
       where: { callSid: test.callSid },
       update: {
