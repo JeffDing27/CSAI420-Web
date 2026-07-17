@@ -1,8 +1,10 @@
-import type { AuthSession, User } from "@prisma/client";
+﻿import type { AuthSession, Role, User } from "@prisma/client";
 import crypto from "crypto";
 import { AuthSessionRepository } from "../repository/auth-session.repository";
 import { CustomerReferenceRepository } from "../repository/customer-reference.repository";
 import { UserRepository } from "../repository/user.repository";
+
+const SCRYPT_KEY_LENGTH = 64;
 
 export class AuthService {
   static normalizeEmail(email: string): string {
@@ -10,34 +12,87 @@ export class AuthService {
   }
 
   static normalizePhone(phone: string): string {
-    // Basic normalization: remove non-numeric characters except leading +
-    return phone.replace(/[^\d+]/g, "");
+    const trimmed = phone.trim();
+    const digits = trimmed.replace(/\D/g, "");
+    if (trimmed.startsWith("+")) return `+${digits}`;
+    if (digits.length === 10) return `+1${digits}`;
+    return `+${digits}`;
+  }
+
+  private static hashPassword(password: string, salt: string): string {
+    return `scrypt$${crypto.scryptSync(password, salt, SCRYPT_KEY_LENGTH).toString("hex")}`;
+  }
+
+  private static verifyPassword(
+    password: string,
+    salt: string,
+    expectedHash: string,
+  ): boolean {
+    let submittedHash: string;
+    let storedHash = expectedHash;
+
+    if (expectedHash.startsWith("scrypt$")) {
+      storedHash = expectedHash.slice("scrypt$".length);
+      submittedHash = crypto
+        .scryptSync(password, salt, SCRYPT_KEY_LENGTH)
+        .toString("hex");
+    } else {
+      submittedHash = crypto
+        .pbkdf2Sync(password, salt, 1000, 64, "sha512")
+        .toString("hex");
+    }
+
+    const expected = Buffer.from(storedHash, "hex");
+    const submitted = Buffer.from(submittedHash, "hex");
+    return (
+      expected.length === submitted.length &&
+      expected.length > 0 &&
+      crypto.timingSafeEqual(expected, submitted)
+    );
   }
 
   static async signup(
-    payload: any,
+    payload: {
+      userName: string;
+      email: string;
+      password: string;
+      birthDate: string;
+      phone: string;
+      region: string;
+      firstName?: string;
+      lastName?: string;
+      role?: Role;
+    },
   ): Promise<{ user: User | null; error?: string }> {
-    const { userName, email, password, birthDate, phone, region } = payload;
+    const {
+      userName,
+      email,
+      password,
+      birthDate,
+      phone,
+      region,
+      role = "PATIENT",
+    } = payload;
 
     const normalizedEmail = AuthService.normalizeEmail(email);
     const normalizedPhone = AuthService.normalizePhone(phone);
 
-    const existingUserEmail = await UserRepository.findByEmail(normalizedEmail);
-    if (existingUserEmail)
+    if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
+      return { user: null, error: "Enter a valid phone number" };
+    }
+    if (password.length < 10) {
+      return { user: null, error: "Password must be at least 10 characters" };
+    }
+
+    if (await UserRepository.findByEmail(normalizedEmail))
       return { user: null, error: "User already exists with this email" };
-
-    const existingUserPhone = await UserRepository.findByPhone(normalizedPhone);
-    if (existingUserPhone)
+    if (await UserRepository.findByPhone(normalizedPhone))
       return { user: null, error: "User already exists with this phone" };
-
-    const existingUserName = await UserRepository.findByUserName(userName);
-    if (existingUserName)
+    if (await UserRepository.findByUserName(userName))
       return { user: null, error: "User already exists with this username" };
 
     const salt = crypto.randomBytes(16).toString("hex");
-    const passwordHash = crypto
-      .pbkdf2Sync(password, salt, 1000, 64, "sha512")
-      .toString("hex");
+    const passwordHash = AuthService.hashPassword(password, salt);
 
     const user = await UserRepository.create({
       userName,
@@ -47,11 +102,11 @@ export class AuthService {
       region,
       passwordHash,
       passwordSalt: salt,
-      firstName: payload.firstName || "",
-      lastName: payload.lastName || "",
+      firstName: payload.firstName?.trim() || "",
+      lastName: payload.lastName?.trim() || "",
+      role,
     });
 
-    // Create CustomerReference
     await CustomerReferenceRepository.upsert({
       name: `${user.firstName} ${user.lastName}`.trim() || user.userName,
       phone: user.phone,
@@ -66,46 +121,23 @@ export class AuthService {
   static async login(
     userNameOrEmail: string,
     password: string,
-  ): Promise<{ token?: string; error?: string }> {
+  ): Promise<{ token?: string; user?: User; error?: string }> {
     const normalized = AuthService.normalizeEmail(userNameOrEmail);
-
-    // Try email first
     let user = await UserRepository.findByEmail(normalized);
-
-    // Fallback to username
-    if (!user) {
-      user = await UserRepository.findByUserName(userNameOrEmail);
-    }
-
-    if (!user || !user.passwordSalt || !user.passwordHash) {
-      return { error: "Invalid credentials" };
-    }
-
-    const salt = user.passwordSalt;
-    const expectedHash = user.passwordHash;
-    const submittedHash = crypto
-      .pbkdf2Sync(password, salt, 1000, 64, "sha512")
-      .toString("hex");
-
-    const expectedHashBuffer = Buffer.from(expectedHash, "hex");
-    const submittedHashBuffer = Buffer.from(submittedHash, "hex");
+    if (!user) user = await UserRepository.findByUserName(userNameOrEmail);
 
     if (
-      expectedHashBuffer.length !== submittedHashBuffer.length ||
-      !crypto.timingSafeEqual(expectedHashBuffer, submittedHashBuffer)
+      !user ||
+      !user.passwordSalt ||
+      !user.passwordHash ||
+      !AuthService.verifyPassword(password, user.passwordSalt, user.passwordHash)
     ) {
       return { error: "Invalid credentials" };
     }
 
-    // Generate Session Token
     const rawToken = crypto.randomUUID();
-    const tokenHash = crypto
-      .createHash("sha256")
-      .update(rawToken)
-      .digest("hex");
-
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days expiration
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     await AuthSessionRepository.create({
       userId: user.id,
@@ -114,28 +146,20 @@ export class AuthService {
       revokedAt: null,
     });
 
-    return { token: rawToken };
+    return { token: rawToken, user };
   }
 
   static async validateSession(rawToken: string): Promise<AuthSession | null> {
-    const tokenHash = crypto
-      .createHash("sha256")
-      .update(rawToken)
-      .digest("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     const session = await AuthSessionRepository.findByTokenHash(tokenHash);
-
-    if (!session) return null;
-    if (session.revokedAt) return null;
-    if (new Date() > session.expiresAt) return null;
-
+    if (!session || session.revokedAt || new Date() > session.expiresAt) {
+      return null;
+    }
     return session;
   }
 
   static async logout(rawToken: string): Promise<void> {
-    const tokenHash = crypto
-      .createHash("sha256")
-      .update(rawToken)
-      .digest("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     await AuthSessionRepository.revoke(tokenHash);
   }
 }

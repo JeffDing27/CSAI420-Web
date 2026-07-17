@@ -1,4 +1,4 @@
-import type { User } from "@prisma/client";
+﻿import type { User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { kvGet, kvSet } from "@/utils/kv-store";
 
@@ -38,6 +38,7 @@ export class UserRepository {
           passwordHash: kvUser.passwordHash,
           passwordSalt: kvUser.passwordSalt,
           externalUserId: null,
+          role: kvUser.role || "PATIENT",
           createdAt: new Date(),
           updatedAt: new Date(),
         };

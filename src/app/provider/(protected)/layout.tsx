@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+﻿import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AuthService } from "@/lib/service/auth.service";
 import Link from "next/link";
@@ -24,7 +24,7 @@ export default async function ProviderLayout({
   }
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
-  if (!user || user.role !== "CLINICIAN") {
+  if (!user || (user.role !== "CLINICIAN" && user.role !== "ADMIN")) {
     // Non-clinicians are forbidden from provider portal
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -61,3 +61,4 @@ export default async function ProviderLayout({
     </div>
   );
 }
+
