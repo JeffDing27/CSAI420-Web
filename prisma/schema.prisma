@@ -19,10 +19,52 @@ model CustomerConsent {
 }
 
 model ConsentedClinician {
-  id              Int      @id @default(autoincrement())
-  customerEmail   String
-  clinicianEmail  String
-  expirationDate  DateTime
+  id             Int      @id @default(autoincrement())
+  customerEmail  String
+  clinicianEmail String
+  expirationDate DateTime
 
   @@unique([customerEmail, clinicianEmail])
+}
+
+model Student {
+  id        Int      @id @default(autoincrement())
+  firstName String
+  lastName  String
+  email     String   @unique
+  studentId String
+  major     String
+  yearLevel String
+  phone     String
+  city      String
+  state     String
+  createdAt DateTime @default(now())
+}
+
+model Course {
+  id          Int      @id @default(autoincrement())
+  courseCode  String   @unique
+  title       String
+  description String
+  department  String
+  instructor  String
+  credits     Int
+  room        String
+  schedule    String
+  semester    String
+  createdAt   DateTime @default(now())
+}
+
+model Assignment {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  courseCode  String
+  dueDate     DateTime
+  points      Int
+  status      String
+  category    String
+  submitted   Boolean  @default(false)
+  notes       String
+  createdAt   DateTime @default(now())
 }
