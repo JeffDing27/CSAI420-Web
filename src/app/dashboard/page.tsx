@@ -1,3 +1,5 @@
+import PatientInformationCard from "@/components/PatientInformationCard";
+
 export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-gray-100 p-6">
@@ -10,8 +12,14 @@ export default function DashboardPage() {
           View patient information and fall-risk assessment results.
         </p>
 
-        <div className="mt-8 rounded-lg bg-white p-6 shadow">
-          <p>Dashboard content will appear here.</p>
+        <div className="mt-8">
+          <PatientInformationCard
+            name="John Smith"
+            age={74}
+            email="john.smith@example.com"
+            assessmentDate="July 21, 2026"
+            status="Assessment Complete"
+          />
         </div>
       </div>
     </main>
