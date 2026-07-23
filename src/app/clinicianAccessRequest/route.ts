@@ -1,4 +1,5 @@
 import { prisma } from "@/utils/prisma";
+import { getSessionToken } from "@/utils/pass-through";
 
 type AccessRequestBody = {
   clinicianUsername?: string;
@@ -6,25 +7,7 @@ type AccessRequestBody = {
 };
 
 function isAuthenticated(request: Request): boolean {
-  const headerNames = Array.from(request.headers.keys());
-
-  const possibleHeaders = [
-    "suresteps.session.token",
-    "suresteps-session-token",
-    "x-suresteps-session-token",
-    "authorization",
-  ];
-
-  const detectedHeader = possibleHeaders.find((headerName) => {
-    const value = request.headers.get(headerName);
-    return Boolean(value?.trim());
-  });
-
-  console.log(
-    `[Week 3 Auth] incomingHeaders: ${headerNames.join(", ")} | detectedHeader: ${detectedHeader ?? "none"}`,
-  );
-
-  return Boolean(detectedHeader);
+  return Boolean(getSessionToken(request));
 }
 async function readRequestBody(
   request: Request,
