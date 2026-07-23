@@ -27,6 +27,16 @@ model ConsentedClinician {
   @@unique([customerEmail, clinicianEmail])
 }
 
+model ClinicianAccessRequest {
+  id                Int      @id @default(autoincrement())
+  clinicianUsername String
+  customerEmail     String
+  requestDate       DateTime @default(now())
+  status            String   @default("pending")
+
+  @@unique([clinicianUsername, customerEmail])
+}
+
 model Student {
   id        Int      @id @default(autoincrement())
   firstName String

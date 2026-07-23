@@ -2,8 +2,9 @@ packages:
   - "."
 
 allowBuilds:
-  '@prisma/engines': set this to true or false
-  prisma: set this to true or false
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
   sharp: false
 
 ignoredBuiltDependencies:
