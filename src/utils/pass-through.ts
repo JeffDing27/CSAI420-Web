@@ -1,31 +1,34 @@
 import { NextResponse } from "next/server";
 
-const POSSIBLE_TOKEN_HEADERS = [
+const DIRECT_TOKEN_HEADERS = [
+  "suresteps.session.token",
+  "suresteps-session-token",
   "x-suresteps-session-token",
   "authorization",
-  "suresteps-session-token",
+] as const;
+
+const VERCEL_SECURE_TOKEN_HEADERS = [
   "suresteps.session.token",
+  "suresteps-session-token",
+  "x-suresteps-session-token",
 ] as const;
 
 function normalizeToken(headerName: string, value: string): string {
+  const trimmedValue = value.trim();
+
   if (
     headerName.toLowerCase() === "authorization" &&
-    value.startsWith("Bearer ")
+    trimmedValue.toLowerCase().startsWith("bearer ")
   ) {
-    return value.substring(7).trim();
+    return trimmedValue.substring(7).trim();
   }
 
-  return value.trim();
+  return trimmedValue;
 }
 
-/**
- * Finds the SureSteps session token in either:
- * 1. The normal incoming request headers, or
- * 2. Vercel's x-vercel-sc-headers metadata.
- */
 export function getSessionToken(request: Request): string | null {
-  // Check normal incoming headers first.
-  for (const headerName of POSSIBLE_TOKEN_HEADERS) {
+  // Normal request headers may legitimately use Authorization.
+  for (const headerName of DIRECT_TOKEN_HEADERS) {
     const value = request.headers.get(headerName);
 
     if (value?.trim()) {
@@ -33,7 +36,6 @@ export function getSessionToken(request: Request): string | null {
     }
   }
 
-  // Check whether Vercel placed headers inside x-vercel-sc-headers.
   const secureHeadersValue = request.headers.get("x-vercel-sc-headers");
 
   if (!secureHeadersValue) {
@@ -49,28 +51,30 @@ export function getSessionToken(request: Request): string | null {
 
     const secureHeaders = parsed as Record<string, unknown>;
 
-    for (const [headerName, rawValue] of Object.entries(secureHeaders)) {
-      const normalizedHeaderName = headerName.toLowerCase();
+    for (const [name, rawValue] of Object.entries(secureHeaders)) {
+      const normalizedName = name.toLowerCase();
 
+      // Important:
+      // Do not accept "authorization" from x-vercel-sc-headers.
+      // Vercel may put its own internal authorization data there.
       if (
-        !POSSIBLE_TOKEN_HEADERS.includes(
-          normalizedHeaderName as (typeof POSSIBLE_TOKEN_HEADERS)[number],
+        !VERCEL_SECURE_TOKEN_HEADERS.includes(
+          normalizedName as (typeof VERCEL_SECURE_TOKEN_HEADERS)[number],
         )
       ) {
         continue;
       }
 
       if (typeof rawValue === "string" && rawValue.trim()) {
-        return normalizeToken(normalizedHeaderName, rawValue);
+        return normalizeToken(normalizedName, rawValue);
       }
 
-      // Support a possible array-based header representation.
       if (
         Array.isArray(rawValue) &&
         typeof rawValue[0] === "string" &&
         rawValue[0].trim()
       ) {
-        return normalizeToken(normalizedHeaderName, rawValue[0]);
+        return normalizeToken(normalizedName, rawValue[0]);
       }
     }
   } catch {
