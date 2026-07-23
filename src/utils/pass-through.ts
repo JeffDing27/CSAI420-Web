@@ -5,13 +5,16 @@ export async function forwardRequest(request: Request, path: string) {
   const url = `${baseUrl}${path}`;
 
   const incomingHeaderNames = Array.from(request.headers.keys());
-  console.log(`[Pass-Through] Incoming header names:`, incomingHeaderNames.join(", "));
+  console.log(
+    `[Pass-Through] Incoming header names:`,
+    incomingHeaderNames.join(", "),
+  );
 
   const possibleTokenHeaders = [
     "x-suresteps-session-token",
     "authorization",
     "suresteps-session-token",
-    "suresteps.session.token"
+    "suresteps.session.token",
   ];
 
   let token: string | null = null;
@@ -20,19 +23,23 @@ export async function forwardRequest(request: Request, path: string) {
   for (const headerName of possibleTokenHeaders) {
     const val = request.headers.get(headerName);
     if (val) {
-      token = headerName.toLowerCase() === "authorization" && val.startsWith("Bearer ")
-        ? val.substring(7)
-        : val;
+      token =
+        headerName.toLowerCase() === "authorization" &&
+        val.startsWith("Bearer ")
+          ? val.substring(7)
+          : val;
       detectedSessionHeaderName = headerName;
       break;
     }
   }
 
   // Safe logging for session token
-  console.log(`[Pass-Through] ${request.method} ${path} | hasSessionToken: ${!!token} | detectedSessionHeaderName: ${detectedSessionHeaderName}`);
+  console.log(
+    `[Pass-Through] ${request.method} ${path} | hasSessionToken: ${!!token} | detectedSessionHeaderName: ${detectedSessionHeaderName}`,
+  );
 
   const fetchHeaders: Record<string, string> = {};
-  
+
   const contentType = request.headers.get("content-type");
   if (contentType) {
     fetchHeaders["content-type"] = contentType;
@@ -57,7 +64,10 @@ export async function forwardRequest(request: Request, path: string) {
         }
       }
     } catch (error) {
-      console.error(`[Pass-Through] Failed to read request body for ${path}:`, error);
+      console.error(
+        `[Pass-Through] Failed to read request body for ${path}:`,
+        error,
+      );
       return new Response("Internal Server Error", { status: 500 });
     }
   }
@@ -70,15 +80,26 @@ export async function forwardRequest(request: Request, path: string) {
       body,
     });
   } catch (error) {
-    console.error(`[Pass-Through] Network/proxy error fetching upstream ${url}:`, error);
+    console.error(
+      `[Pass-Through] Network/proxy error fetching upstream ${url}:`,
+      error,
+    );
     return new Response("Internal Server Error", { status: 500 });
   }
 
   let rawText = "";
   try {
     rawText = await upstreamRes.text();
+    if (path === "/login") {
+      console.log(
+        `[Pass-Through] Login upstream status: ${upstreamRes.status} | bodyLength: ${rawText.length} | contentType: ${upstreamRes.headers.get("content-type")}`,
+      );
+    }
   } catch (error) {
-    console.error(`[Pass-Through] Failed to read upstream response body for ${url}:`, error);
+    console.error(
+      `[Pass-Through] Failed to read upstream response body for ${url}:`,
+      error,
+    );
     return new Response("Internal Server Error", { status: 500 });
   }
 
@@ -88,19 +109,28 @@ export async function forwardRequest(request: Request, path: string) {
       logContext = { ...parsedReqBody };
       for (const key of Object.keys(logContext)) {
         const lowerKey = key.toLowerCase();
-        if (lowerKey.includes("password") || lowerKey.includes("token") || lowerKey.includes("secret")) {
+        if (
+          lowerKey.includes("password") ||
+          lowerKey.includes("token") ||
+          lowerKey.includes("secret")
+        ) {
           logContext[key] = "***REDACTED***";
         }
       }
     }
-    
+
     if (path.startsWith("/riskscore/") && request.method === "GET") {
       logContext.email = path.replace("/riskscore/", "");
     }
 
-    console.error(`[Pass-Through] Endpoint: ${path} | Method: ${request.method} | Upstream URL: ${url} | Status: ${upstreamRes.status}`);
+    console.error(
+      `[Pass-Through] Endpoint: ${path} | Method: ${request.method} | Upstream URL: ${url} | Status: ${upstreamRes.status}`,
+    );
     if (Object.keys(logContext).length > 0) {
-      console.error(`[Pass-Through] Request Context:`, JSON.stringify(logContext));
+      console.error(
+        `[Pass-Through] Request Context:`,
+        JSON.stringify(logContext),
+      );
     }
     console.error(`[Pass-Through] Response Body:`, rawText);
   }

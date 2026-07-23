@@ -7,6 +7,8 @@ type RouteContext = {
 };
 
 function isAuthenticated(request: Request): boolean {
+  const headerNames = Array.from(request.headers.keys());
+
   const possibleHeaders = [
     "suresteps.session.token",
     "suresteps-session-token",
@@ -14,15 +16,16 @@ function isAuthenticated(request: Request): boolean {
     "authorization",
   ];
 
-  for (const headerName of possibleHeaders) {
+  const detectedHeader = possibleHeaders.find((headerName) => {
     const value = request.headers.get(headerName);
+    return Boolean(value?.trim());
+  });
 
-    if (value?.trim()) {
-      return true;
-    }
-  }
+  console.log(
+    `[Week 3 Auth] incomingHeaders: ${headerNames.join(", ")} | detectedHeader: ${detectedHeader ?? "none"}`,
+  );
 
-  return false;
+  return Boolean(detectedHeader);
 }
 
 export async function GET(request: Request, context: RouteContext) {
