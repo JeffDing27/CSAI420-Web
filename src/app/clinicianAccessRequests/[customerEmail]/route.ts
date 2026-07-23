@@ -7,8 +7,22 @@ type RouteContext = {
 };
 
 function isAuthenticated(request: Request): boolean {
-  const token = request.headers.get("suresteps.session.token");
-  return Boolean(token?.trim());
+  const possibleHeaders = [
+    "suresteps.session.token",
+    "suresteps-session-token",
+    "x-suresteps-session-token",
+    "authorization",
+  ];
+
+  for (const headerName of possibleHeaders) {
+    const value = request.headers.get(headerName);
+
+    if (value?.trim()) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export async function GET(request: Request, context: RouteContext) {
