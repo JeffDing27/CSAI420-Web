@@ -9,6 +9,20 @@ export async function forwardRequest(request: Request, path: string) {
     `[Pass-Through] Incoming header names:`,
     incomingHeaderNames.join(", "),
   );
+  const vercelSecureHeaders = request.headers.get("x-vercel-sc-headers");
+
+  if (vercelSecureHeaders) {
+    try {
+      const parsedSecureHeaders = JSON.parse(vercelSecureHeaders);
+
+      console.log(
+        "[Pass-Through] x-vercel-sc-headers names:",
+        Object.keys(parsedSecureHeaders).join(", "),
+      );
+    } catch {
+      console.log("[Pass-Through] Unable to parse x-vercel-sc-headers");
+    }
+  }
 
   const possibleTokenHeaders = [
     "x-suresteps-session-token",
