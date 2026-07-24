@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ClinicianAccessRequestService } from "@/services/clinician-access-request.service";
+import { hasAuth } from "@/utils/auth";
 
 const service = new ClinicianAccessRequestService();
 
@@ -10,9 +11,9 @@ export async function GET(
   const { customer } = await params;
 
   // Accept token header per requirements
-  const token =
-    request.headers.get("suresteps.session.token") ||
-    request.headers.get("x-suresteps-session-token");
+  if (!hasAuth(request)) {
+    return new Response("Unauthorized", { status: 401 });
+  }
 
   // Format to match STEDI mock
   const data = await service.getRequests(customer);

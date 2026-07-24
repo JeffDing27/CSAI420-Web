@@ -23,7 +23,7 @@ Resources:
       QueueName: stedi-escalation-dlq
       MessageRetentionPeriod: 1209600
 
-  ProcessEscalationFunction:
+  MobilityCoachEscalationFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./lambdas/process-escalation/
@@ -36,3 +36,9 @@ Resources:
           Properties:
             Queue: !GetAtt EscalationQueue.Arn
             BatchSize: 10
+      Environment:
+        Variables:
+          SQS_QUEUE_URL: !Ref EscalationQueue
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt EscalationQueue.QueueName
