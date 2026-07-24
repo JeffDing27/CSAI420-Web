@@ -1,11 +1,5 @@
 import { NextResponse } from "next/server";
 
-const POSSIBLE_TOKEN_HEADERS = [
-  "x-suresteps-session-token",
-  "suresteps-session-token",
-  "suresteps.session.token",
-] as const;
-
 /**
  * Finds the SureSteps session token in either:
  * 1. The normal incoming request headers, or
@@ -24,6 +18,31 @@ export function getSessionToken(request: Request): string | null {
 
   // Vercel moves the secure token into this metadata header.
   const secureHeadersValue = request.headers.get("x-vercel-sc-headers");
+
+  if (secureHeadersValue) {
+    try {
+      const debugHeaders = JSON.parse(secureHeadersValue) as Record<
+        string,
+        unknown
+      >;
+
+      const debugAuthorization =
+        debugHeaders.Authorization ?? debugHeaders.authorization;
+
+      if (typeof debugAuthorization === "string") {
+        console.log("[Auth Debug] Authorization metadata:", {
+          length: debugAuthorization.length,
+          startsWithBearer: debugAuthorization
+            .toLowerCase()
+            .startsWith("bearer "),
+        });
+      } else {
+        console.log("[Auth Debug] No string Authorization metadata");
+      }
+    } catch {
+      console.log("[Auth Debug] Invalid x-vercel-sc-headers JSON");
+    }
+  }
 
   if (!secureHeadersValue) {
     return null;
