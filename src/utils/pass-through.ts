@@ -24,28 +24,16 @@ function normalizeToken(headerName: string, value: string): string {
  * 2. Vercel's x-vercel-sc-headers metadata.
  */
 export function getSessionToken(request: Request): string | null {
-  // SureSteps token used by the assignment tests
-  const sureStepsToken =
-    request.headers.get("suresteps.session.token") ||
-    request.headers.get("x-suresteps-session-token") ||
-    request.headers.get("suresteps-session-token");
+  const token =
+    request.headers.get("suresteps.session.token") ??
+    request.headers.get("suresteps-session-token") ??
+    request.headers.get("x-suresteps-session-token");
 
-  if (sureStepsToken?.trim()) {
-    return sureStepsToken.trim();
+  if (!token?.trim()) {
+    return null;
   }
 
-  // Optional Bearer-token support from the actual incoming request
-  const authorization = request.headers.get("authorization");
-
-  if (authorization) {
-    const match = authorization.match(/^Bearer\s+(.+)$/i);
-
-    if (match?.[1]?.trim()) {
-      return match[1].trim();
-    }
-  }
-
-  return null;
+  return token.trim();
 }
 
 export async function forwardRequest(request: Request, path: string) {
