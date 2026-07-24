@@ -12,6 +12,33 @@ const POSSIBLE_TOKEN_HEADERS = [
  * 2. Vercel's x-vercel-sc-headers metadata.
  */
 export function getSessionToken(request: Request): string | null {
+  console.log(
+    "[Auth Debug] Header names:",
+    Array.from(request.headers.keys()).join(", "),
+  );
+
+  const secureHeadersValue = request.headers.get("x-vercel-sc-headers");
+
+  if (secureHeadersValue) {
+    try {
+      const parsed = JSON.parse(secureHeadersValue);
+
+      console.log(
+        "[Auth Debug] x-vercel-sc-headers keys:",
+        parsed && typeof parsed === "object"
+          ? Object.keys(parsed).join(", ")
+          : "not an object",
+      );
+    } catch {
+      console.log("[Auth Debug] x-vercel-sc-headers is not JSON");
+    }
+  } else {
+    console.log("[Auth Debug] No x-vercel-sc-headers");
+  }
+
+
+
+export function getSessionToken(request: Request): string | null {
   const directToken =
     request.headers.get("suresteps.session.token") ??
     request.headers.get("suresteps-session-token") ??
