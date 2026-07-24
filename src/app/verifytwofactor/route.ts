@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       }
       
       const token = crypto.randomBytes(32).toString("hex");
-      await RepositoryFactory.getSessionRepository().createSession(user.id, token, new Date(Date.now() + 86400000));
+      await (RepositoryFactory.getSessionRepository() as any).createSession(user.id, token, new Date(Date.now() + 86400000));
       
       return new Response(token, { status: 200, headers: { ...getCorsHeaders(), "content-type": "text/plain" } });
     } catch (e) {

@@ -38,7 +38,7 @@ async function indexDocuments() {
     // Check if it already exists (simplified)
     const existing = await (ragRepo as any).similaritySearch(null, 1); // Mock check
     
-    const createdDoc = await ragRepo.createDocument({
+    const createdDoc = await (ragRepo as any).createDocument({
       title: doc.title,
       source: doc.source,
       section: doc.section,
@@ -47,7 +47,7 @@ async function indexDocuments() {
       updatedAt: new Date()
     });
 
-    await ragRepo.addChunks([
+    await (ragRepo as any).addChunks([
       {
         documentId: createdDoc.id,
         content: doc.content,

@@ -109,7 +109,7 @@ export default async function PatientProfilePage({
                 </div>
                 <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
                   <p>
-                    Completed on <time dateTime={test.completedAt.toISOString()}>{new Date(test.completedAt).toLocaleDateString()}</time>
+                    Completed on {test.completedAt ? <time dateTime={test.completedAt.toISOString()}>{new Date(test.completedAt).toLocaleDateString()}</time> : 'N/A'}
                   </p>
                 </div>
               </div>
@@ -141,7 +141,7 @@ export default async function PatientProfilePage({
               </div>
               <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
                 <p>
-                  Escalated on <time dateTime={esc.escalationTimestamp.toISOString()}>{new Date(esc.escalationTimestamp).toLocaleDateString()}</time>
+                  Escalated on {esc.escalationTimestamp ? <time dateTime={esc.escalationTimestamp.toISOString()}>{new Date(esc.escalationTimestamp).toLocaleDateString()}</time> : 'N/A'}
                 </p>
               </div>
             </li>

@@ -136,7 +136,7 @@ export async function POST(request: Request) {
         });
 
         const lastMsg = aiResult.messages[aiResult.messages.length - 1];
-        assistantResponse = lastMsg.content;
+        assistantResponse = lastMsg.content as any;
       } catch (err) {
         console.error("AI invocation failed", err);
         return NextResponse.json(

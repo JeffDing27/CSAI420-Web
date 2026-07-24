@@ -58,7 +58,7 @@ async function seed() {
   for (const u of users) {
     const existing = await prisma.user.findUnique({ where: { email: u.email } });
     if (!existing) {
-      await AuthService.register({
+      await AuthService.signup({
         userName: u.userName,
         email: u.email,
         firstName: u.firstName,
@@ -68,7 +68,7 @@ async function seed() {
         region: u.region,
         password: demoPassword,
       });
-      // Update role (register defaults to PATIENT)
+      // Update role (signup defaults to PATIENT)
       await prisma.user.update({
         where: { email: u.email },
         data: { role: u.role as any }

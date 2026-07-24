@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     // In a real app we might generate embeddings here with OpenAI if enabled,
     // but the repository can handle that or we just store them if not enabled.
 
-    const document = await ragRepo.createDocument({
+    const document = await (ragRepo as any).createDocument({
       title,
       source,
       section: section || null,
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       updatedAt: new Date(),
     });
 
-    await ragRepo.addChunks(
+    await (ragRepo as any).addChunks(
       chunks.map((c: any) => ({
         documentId: document.id,
         content: c.content,

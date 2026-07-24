@@ -40,7 +40,7 @@ export class UserRepository {
           externalUserId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
-        };
+        } as any;
       }
     }
 

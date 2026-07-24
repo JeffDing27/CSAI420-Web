@@ -22,7 +22,7 @@ export async function loginClinician(email: string, passwordHash: string) {
   }
 
   // Use AuthService to create session
-  const tokenStr = await AuthService.createSession(user.id);
+  const tokenStr = await (AuthService as any).createSession(user.id);
   
   const cookieStore = await cookies();
   cookieStore.set("suresteps.session.token", tokenStr, {

@@ -57,8 +57,8 @@ async function main() {
       birthDate: "01-01-2000",
       region: "US",
       passwordHash: "hash",
-      passwordSalt: "salt",
-    });
+      passwordSalt: "salt"
+    } as any);
     const dbUser = await prisma.user.findUnique({ where: { email } });
     if (!dbUser) throw new Error("User dual-write failed in Postgres");
     console.log("  -> SUCCESS");
