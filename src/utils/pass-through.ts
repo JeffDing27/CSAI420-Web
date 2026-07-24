@@ -24,18 +24,57 @@ function normalizeToken(headerName: string, value: string): string {
  * 2. Vercel's x-vercel-sc-headers metadata.
  */
 export function getSessionToken(request: Request): string | null {
-  const token =
+  const directToken =
     request.headers.get("suresteps.session.token") ??
     request.headers.get("suresteps-session-token") ??
     request.headers.get("x-suresteps-session-token");
 
-  if (!token?.trim()) {
+  if (directToken?.trim()) {
+    return directToken.trim();
+  }
+
+  const secureHeadersValue = request.headers.get("x-vercel-sc-headers");
+
+  if (!secureHeadersValue) {
     return null;
   }
 
-  return token.trim();
-}
+  try {
+    const parsed = JSON.parse(secureHeadersValue) as unknown;
 
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const secureHeaders = parsed as Record<string, unknown>;
+
+    const possibleNames = [
+      "suresteps.session.token",
+      "suresteps-session-token",
+      "x-suresteps-session-token",
+    ];
+
+    for (const headerName of possibleNames) {
+      const value = secureHeaders[headerName];
+
+      if (typeof value === "string" && value.trim()) {
+        return value.trim();
+      }
+
+      if (
+        Array.isArray(value) &&
+        typeof value[0] === "string" &&
+        value[0].trim()
+      ) {
+        return value[0].trim();
+      }
+    }
+  } catch {
+    console.error("[Auth] Unable to parse x-vercel-sc-headers");
+  }
+
+  return null;
+}
 export async function forwardRequest(request: Request, path: string) {
   const baseUrl = process.env.STEDI_API_BASE_URL || "https://dev.stedi.me";
   const url = `${baseUrl}${path}`;
