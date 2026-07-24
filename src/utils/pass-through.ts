@@ -2,21 +2,9 @@ import { NextResponse } from "next/server";
 
 const POSSIBLE_TOKEN_HEADERS = [
   "x-suresteps-session-token",
-  "authorization",
   "suresteps-session-token",
   "suresteps.session.token",
 ] as const;
-
-function normalizeToken(headerName: string, value: string): string {
-  if (
-    headerName.toLowerCase() === "authorization" &&
-    value.startsWith("Bearer ")
-  ) {
-    return value.substring(7).trim();
-  }
-
-  return value.trim();
-}
 
 /**
  * Finds the SureSteps session token in either:
@@ -48,13 +36,7 @@ export function getSessionToken(request: Request): string | null {
 
     const secureHeaders = parsed as Record<string, unknown>;
 
-    const possibleNames = [
-      "suresteps.session.token",
-      "suresteps-session-token",
-      "x-suresteps-session-token",
-    ];
-
-    for (const headerName of possibleNames) {
+    for (const headerName of POSSIBLE_TOKEN_HEADERS) {
       const value = secureHeaders[headerName];
 
       if (typeof value === "string" && value.trim()) {
