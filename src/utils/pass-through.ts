@@ -12,30 +12,7 @@ const POSSIBLE_TOKEN_HEADERS = [
  * 2. Vercel's x-vercel-sc-headers metadata.
  */
 export function getSessionToken(request: Request): string | null {
-  console.log(
-    "[Auth Debug] Header names:",
-    Array.from(request.headers.keys()).join(", "),
-  );
-
-  const secureHeadersValue = request.headers.get("x-vercel-sc-headers");
-
-  if (secureHeadersValue) {
-    try {
-      const parsed = JSON.parse(secureHeadersValue) as unknown;
-
-      console.log(
-        "[Auth Debug] x-vercel-sc-headers keys:",
-        parsed && typeof parsed === "object" && !Array.isArray(parsed)
-          ? Object.keys(parsed).join(", ")
-          : "not an object",
-      );
-    } catch {
-      console.log("[Auth Debug] x-vercel-sc-headers is not JSON");
-    }
-  } else {
-    console.log("[Auth Debug] No x-vercel-sc-headers");
-  }
-
+  // This works locally when the original header is available directly.
   const directToken =
     request.headers.get("suresteps.session.token") ??
     request.headers.get("suresteps-session-token") ??
@@ -44,6 +21,9 @@ export function getSessionToken(request: Request): string | null {
   if (directToken?.trim()) {
     return directToken.trim();
   }
+
+  // Vercel moves the secure token into this metadata header.
+  const secureHeadersValue = request.headers.get("x-vercel-sc-headers");
 
   if (!secureHeadersValue) {
     return null;
@@ -58,19 +38,34 @@ export function getSessionToken(request: Request): string | null {
 
     const secureHeaders = parsed as Record<string, unknown>;
 
-    for (const headerName of POSSIBLE_TOKEN_HEADERS) {
-      const value = secureHeaders[headerName];
+    for (const [headerName, rawValue] of Object.entries(secureHeaders)) {
+      const normalizedName = headerName.toLowerCase();
 
-      if (typeof value === "string" && value.trim()) {
-        return value.trim();
+      const isTokenHeader =
+        normalizedName === "authorization" ||
+        normalizedName === "suresteps.session.token" ||
+        normalizedName === "suresteps-session-token" ||
+        normalizedName === "x-suresteps-session-token";
+
+      if (!isTokenHeader) {
+        continue;
+      }
+
+      if (typeof rawValue === "string" && rawValue.trim()) {
+        const value = rawValue.trim();
+
+        return normalizedName === "authorization" &&
+          value.toLowerCase().startsWith("bearer ")
+          ? value.substring(7).trim()
+          : value;
       }
 
       if (
-        Array.isArray(value) &&
-        typeof value[0] === "string" &&
-        value[0].trim()
+        Array.isArray(rawValue) &&
+        typeof rawValue[0] === "string" &&
+        rawValue[0].trim()
       ) {
-        return value[0].trim();
+        return rawValue[0].trim();
       }
     }
   } catch {
