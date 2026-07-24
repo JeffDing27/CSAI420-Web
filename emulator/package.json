@@ -1,0 +1,14 @@
+{
+  "name": "stedi-device-emulator",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "stedi-sim": "./src/cli.js"
+  },
+  "scripts": {
+    "daemon": "node ./src/daemon.js",
+    "send-steps": "node ./src/cli.js send-steps",
+    "status": "node ./src/cli.js status",
+    "test": "../node_modules/.bin/vitest run ../emulator/*.test.js"
+  }
+}
