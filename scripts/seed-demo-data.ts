@@ -1,9 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../src/lib/prisma";
 import { AuthService } from "../src/lib/service/auth.service";
 import crypto from "crypto";
 import { RepositoryFactory } from "../src/repositories/provider-factory";
 
-const prisma = new PrismaClient();
+
 
 async function seed() {
   console.log("Seeding demo data...");
