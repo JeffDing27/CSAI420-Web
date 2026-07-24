@@ -21,11 +21,11 @@ export function getSessionToken(request: Request): string | null {
 
   if (secureHeadersValue) {
     try {
-      const parsed = JSON.parse(secureHeadersValue);
+      const parsed = JSON.parse(secureHeadersValue) as unknown;
 
       console.log(
         "[Auth Debug] x-vercel-sc-headers keys:",
-        parsed && typeof parsed === "object"
+        parsed && typeof parsed === "object" && !Array.isArray(parsed)
           ? Object.keys(parsed).join(", ")
           : "not an object",
       );
@@ -36,9 +36,6 @@ export function getSessionToken(request: Request): string | null {
     console.log("[Auth Debug] No x-vercel-sc-headers");
   }
 
-
-
-export function getSessionToken(request: Request): string | null {
   const directToken =
     request.headers.get("suresteps.session.token") ??
     request.headers.get("suresteps-session-token") ??
@@ -47,8 +44,6 @@ export function getSessionToken(request: Request): string | null {
   if (directToken?.trim()) {
     return directToken.trim();
   }
-
-  const secureHeadersValue = request.headers.get("x-vercel-sc-headers");
 
   if (!secureHeadersValue) {
     return null;
