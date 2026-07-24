@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { EscalationService } from "@/services/escalation.service";
 import { hasAuth } from "@/utils/auth";
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   if (!hasAuth(request)) {

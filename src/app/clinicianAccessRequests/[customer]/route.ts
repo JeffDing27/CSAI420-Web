@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ClinicianAccessRequestService } from "@/services/clinician-access-request.service";
 import { hasAuth } from "@/utils/auth";
 
 const service = new ClinicianAccessRequestService();
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ customer: string }> },
 ) {
   const { customer } = await params;

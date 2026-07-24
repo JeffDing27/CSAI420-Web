@@ -1,9 +1,10 @@
+import { NextRequest } from "next/server";
 import { ConsentService } from "@/services/consent.service";
 
 const service = new ConsentService();
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ customer: string }> },
 ) {
   const { customer } = await params;
@@ -16,7 +17,7 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ customer: string }> },
 ) {
   const { customer } = await params;
