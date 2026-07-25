@@ -20,14 +20,25 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/customer",
     "/customer/:path*",
+    "/rapidsteptest",
     "/rapidsteptest/:path*",
+    "/riskscore",
     "/riskscore/:path*",
+    "/consent",
     "/consent/:path*",
+    "/consentedClinicians",
     "/consentedClinicians/:path*",
+    "/clinicianAccessRequest",
     "/clinicianAccessRequest/:path*",
+    "/clinicianAccessRequests",
     "/clinicianAccessRequests/:path*",
+    "/escalate-question",
     "/escalate-question/:path*",
+    "/escalation",
     "/escalation/:path*",
+    "/escalations",
+    "/escalations/:path*",
   ],
 };
