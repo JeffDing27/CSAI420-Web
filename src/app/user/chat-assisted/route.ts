@@ -16,6 +16,16 @@ export async function POST(request: Request) {
     );
   }
 
+  if (body.lastActivity && typeof body.lastActivity === "string") {
+    const activityTime = Date.parse(body.lastActivity);
+    if (!isNaN(activityTime) && Date.now() - activityTime > 30 * 60 * 1000) {
+      return NextResponse.json(
+        { message: "Registration session expired" },
+        { status: 408 },
+      );
+    }
+  }
+
   // Extract from new nested format or old flat format
   const chatSessionId = body.chatSessionId;
   const userData = body.userData || {};
@@ -54,12 +64,8 @@ export async function POST(request: Request) {
     }
   }
 
-  if (
-    !email ||
-    typeof email !== "string" ||
-    email.includes(" ") ||
-    !email.includes("@")
-  ) {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || typeof email !== "string" || !emailPattern.test(email)) {
     errors.push("Invalid email format");
   }
 
@@ -75,13 +81,22 @@ export async function POST(request: Request) {
     errors.push("Password does not meet complexity requirements");
   }
 
-  if (
-    !birthDate ||
-    typeof birthDate !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) ||
-    isNaN(Date.parse(birthDate))
-  ) {
-    errors.push("Invalid birthDate, must be YYYY-MM-DD");
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!birthDate || typeof birthDate !== "string" || !dateRegex.test(birthDate)) {
+    errors.push("Invalid birthDate format, must be YYYY-MM-DD");
+  } else {
+    const parts = birthDate.split("-");
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    const dateObj = new Date(Date.UTC(year, month - 1, day));
+    if (
+      dateObj.getUTCFullYear() !== year ||
+      dateObj.getUTCMonth() !== month - 1 ||
+      dateObj.getUTCDate() !== day
+    ) {
+      errors.push("Invalid real calendar date");
+    }
   }
 
   const cleanFirstName = sanitizeString(firstName);

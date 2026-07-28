@@ -233,29 +233,54 @@ describe("Classroom Contract - Week 5", () => {
       expect(call.lastName).toBe("García-López");
     });
 
-    it("returns 408 for expired session", async () => {
-      mockGetSession.mockResolvedValueOnce({
-        updatedAt: new Date(Date.now() - 40 * 60 * 1000), // 40 minutes old
-      } as any);
-
+    it("returns 408 for expired session in request body", async () => {
       const request = new Request("http://localhost/user/chat-assisted", {
         method: "POST",
         body: JSON.stringify({
+          chatSessionId: "session_123",
+          lastActivity: new Date(Date.now() - 31 * 60 * 1000).toISOString(),
           userData: {
             email: "chat_123@example.com",
             password: "SecurePassword123!",
             birthDate: "1990-01-01",
-            firstName: "ChatBot",
-            lastName: "TestUser",
           },
-          chatSessionId: "session_123",
         }),
       });
 
       const response = await chatAssistedPost(request);
       expect(response.status).toBe(408);
       const data = await response.json();
-      expect(data.message).toContain("session");
+      expect(data.message.toLowerCase()).toContain("session");
+    });
+
+    it("validates emails strictly", async () => {
+      vi.mocked(UserRepository.findByEmail).mockResolvedValue(null);
+      vi.mocked(AuthService.signup).mockResolvedValue({
+        user: { id: "1", email: "test@example.com", createdAt: new Date() } as any,
+      });
+
+      const runEmailTest = async (email: string) => {
+        const request = new Request("http://localhost/user/chat-assisted", {
+          method: "POST",
+          body: JSON.stringify({
+            userData: {
+              email,
+              password: "SecurePassword123!",
+              birthDate: "1990-01-01",
+              firstName: "Test",
+              lastName: "User",
+            },
+            chatSessionId: "session_123",
+          }),
+        });
+        return chatAssistedPost(request);
+      };
+
+      expect((await runEmailTest("valid.email@example.com")).status).toBe(201);
+      expect((await runEmailTest("invalid-email")).status).toBe(400);
+      expect((await runEmailTest("missing-at-symbol.com")).status).toBe(400);
+      expect((await runEmailTest("@missing-local-part.com")).status).toBe(400);
+      expect((await runEmailTest("spaces in@email.com")).status).toBe(400);
     });
 
     it("handles malformed JSON", async () => {

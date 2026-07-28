@@ -71,7 +71,10 @@ describe("Week 5: Chat-Assisted Registration", () => {
     const req = createRequest("/api/escalate-registration", {
       sessionId: "test",
       reason: "confusion_about_process",
-      phoneNumber: "8011234567"
+      phoneNumber: "8011234567",
+      registrationData: {},
+      aiResponse: "test",
+      conversationContext: []
     });
     const res = await EscalateRegistration(req);
     expect(res.status).toBe(200);

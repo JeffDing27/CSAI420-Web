@@ -48,9 +48,21 @@ export async function POST(request: Request) {
     errors.push(`Unknown issue type: ${issueType}`);
   }
 
+  if (!registrationData || typeof registrationData !== "object" || Array.isArray(registrationData)) {
+    errors.push("Invalid registrationData, must be an object");
+  }
+
+  if (!aiResponse || typeof aiResponse !== "string" || aiResponse.trim() === "") {
+    errors.push("Invalid aiResponse, must be a nonempty string");
+  }
+
+  if (!Array.isArray(conversationContext)) {
+    errors.push("Invalid conversationContext, must be an array");
+  }
+
   const validPreferences = ["call", "text", "chat"];
-  if (responsePreference && !validPreferences.includes(responsePreference)) {
-    // If invalid we can append error, but it defaults to chat if missing.
+  if (!responsePreference || !validPreferences.includes(responsePreference)) {
+    errors.push("Invalid response preference");
   }
 
   if (errors.length > 0) {
