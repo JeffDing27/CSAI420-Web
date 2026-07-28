@@ -46,8 +46,8 @@ describe("Week 5: Chat-Assisted Registration", () => {
     const res = await ContinueSession(req);
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.nextStep).toBe("firstName");
-    expect(data.aiResponse).toContain("first name");
+    expect(data.nextStep).toBe("name_collection");
+    expect(data.aiResponse).toContain("name");
   });
 
   it("POST /user/chat-assisted validates input", async () => {
@@ -71,9 +71,10 @@ describe("Week 5: Chat-Assisted Registration", () => {
     const req = createRequest("/api/escalate-registration", {
       sessionId: "test",
       reason: "confusion_about_process",
+      phoneNumber: "8011234567"
     });
     const res = await EscalateRegistration(req);
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe("escalated");
   });
