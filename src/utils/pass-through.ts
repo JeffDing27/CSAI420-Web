@@ -19,31 +19,6 @@ export function getSessionToken(request: Request): string | null {
   // Vercel moves the secure token into this metadata header.
   const secureHeadersValue = request.headers.get("x-vercel-sc-headers");
 
-  if (secureHeadersValue) {
-    try {
-      const debugHeaders = JSON.parse(secureHeadersValue) as Record<
-        string,
-        unknown
-      >;
-
-      const debugAuthorization =
-        debugHeaders.Authorization ?? debugHeaders.authorization;
-
-      if (typeof debugAuthorization === "string") {
-        console.log("[Auth Debug] Authorization metadata:", {
-          length: debugAuthorization.length,
-          startsWithBearer: debugAuthorization
-            .toLowerCase()
-            .startsWith("bearer "),
-        });
-      } else {
-        console.log("[Auth Debug] No string Authorization metadata");
-      }
-    } catch {
-      console.log("[Auth Debug] Invalid x-vercel-sc-headers JSON");
-    }
-  }
-
   if (!secureHeadersValue) {
     return null;
   }
@@ -61,7 +36,6 @@ export function getSessionToken(request: Request): string | null {
       const normalizedName = headerName.toLowerCase();
 
       const isTokenHeader =
-        normalizedName === "authorization" ||
         normalizedName === "suresteps.session.token" ||
         normalizedName === "suresteps-session-token" ||
         normalizedName === "x-suresteps-session-token";
@@ -71,12 +45,7 @@ export function getSessionToken(request: Request): string | null {
       }
 
       if (typeof rawValue === "string" && rawValue.trim()) {
-        const value = rawValue.trim();
-
-        return normalizedName === "authorization" &&
-          value.toLowerCase().startsWith("bearer ")
-          ? value.substring(7).trim()
-          : value;
+        return rawValue.trim();
       }
 
       if (
