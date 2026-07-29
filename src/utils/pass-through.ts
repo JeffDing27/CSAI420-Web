@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
  * 2. Vercel's x-vercel-sc-headers metadata.
  */
 export function getSessionToken(request: Request): string | null {
-  // This works locally when the original header is available directly..
+  // Only trust explicit incoming headers from the client request.
   const directToken =
     request.headers.get("suresteps.session.token") ??
     request.headers.get("suresteps-session-token") ??
@@ -15,51 +15,6 @@ export function getSessionToken(request: Request): string | null {
   if (directToken?.trim()) {
     return directToken.trim();
   }
-
-  // Vercel moves the secure token into this metadata header.
-  const secureHeadersValue = request.headers.get("x-vercel-sc-headers");
-
-  if (!secureHeadersValue) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(secureHeadersValue) as unknown;
-
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-
-    const secureHeaders = parsed as Record<string, unknown>;
-
-    for (const [headerName, rawValue] of Object.entries(secureHeaders)) {
-      const normalizedName = headerName.toLowerCase();
-
-      const isTokenHeader =
-        normalizedName === "suresteps.session.token" ||
-        normalizedName === "suresteps-session-token" ||
-        normalizedName === "x-suresteps-session-token";
-
-      if (!isTokenHeader) {
-        continue;
-      }
-
-      if (typeof rawValue === "string" && rawValue.trim()) {
-        return rawValue.trim();
-      }
-
-      if (
-        Array.isArray(rawValue) &&
-        typeof rawValue[0] === "string" &&
-        rawValue[0].trim()
-      ) {
-        return rawValue[0].trim();
-      }
-    }
-  } catch {
-    console.error("[Auth] Unable to parse x-vercel-sc-headers");
-  }
-
   return null;
 }
 
