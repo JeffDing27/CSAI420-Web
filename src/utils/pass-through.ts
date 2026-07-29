@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
  * 2. Vercel's x-vercel-sc-headers metadata.
  */
 export function getSessionToken(request: Request): string | null {
-  // This works locally when the original header is available directly.
+  // This works locally when the original header is available directly..
   const directToken =
     request.headers.get("suresteps.session.token") ??
     request.headers.get("suresteps-session-token") ??
