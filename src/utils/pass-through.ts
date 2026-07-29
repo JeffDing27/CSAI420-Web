@@ -93,6 +93,40 @@ export function getSessionToken(request: Request): string | null {
 
   return null;
 }
+
+/**
+ * Validates a SureSteps session token by probing an upstream authenticated
+ * endpoint. Any 401/403 response is treated as an invalid token.
+ */
+export async function validateSessionToken(
+  token: string,
+  customerEmail: string,
+): Promise<boolean> {
+  const normalizedToken = token.trim();
+  const normalizedCustomerEmail = customerEmail.trim();
+
+  if (!normalizedToken || !normalizedCustomerEmail) {
+    return false;
+  }
+
+  const baseUrl = process.env.STEDI_API_BASE_URL || "https://dev.stedi.me";
+  const probeUrl = `${baseUrl}/consent/${encodeURIComponent(normalizedCustomerEmail)}`;
+
+  try {
+    const response = await fetch(probeUrl, {
+      method: "GET",
+      headers: {
+        "suresteps.session.token": normalizedToken,
+      },
+    });
+
+    return response.status !== 401 && response.status !== 403;
+  } catch (error) {
+    console.error("[Auth] Session validation failed:", error);
+    return false;
+  }
+}
+
 export async function forwardRequest(request: Request, path: string) {
   const baseUrl = process.env.STEDI_API_BASE_URL || "https://dev.stedi.me";
   const url = `${baseUrl}${path}`;

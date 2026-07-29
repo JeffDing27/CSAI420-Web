@@ -1,5 +1,5 @@
 import { prisma } from "@/utils/prisma";
-import { getSessionToken } from "@/utils/pass-through";
+import { getSessionToken, validateSessionToken } from "@/utils/pass-through";
 
 type RouteContext = {
   params: Promise<{
@@ -7,13 +7,11 @@ type RouteContext = {
   }>;
 };
 
-function isAuthenticated(request: Request): boolean {
-  return Boolean(getSessionToken(request));
-}
-
 export async function GET(request: Request, context: RouteContext) {
   try {
-    if (!isAuthenticated(request)) {
+    const token = getSessionToken(request);
+
+    if (!token) {
       return new Response("Unauthorized", {
         status: 401,
       });
@@ -25,6 +23,14 @@ export async function GET(request: Request, context: RouteContext) {
     if (!decodedCustomerEmail) {
       return new Response("Customer email is required", {
         status: 400,
+      });
+    }
+
+    const isValidSession = await validateSessionToken(token, decodedCustomerEmail);
+
+    if (!isValidSession) {
+      return new Response("Forbidden", {
+        status: 403,
       });
     }
 

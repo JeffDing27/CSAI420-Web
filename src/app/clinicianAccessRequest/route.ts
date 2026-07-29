@@ -1,13 +1,32 @@
 import { prisma } from "@/utils/prisma";
-import { getSessionToken } from "@/utils/pass-through";
+import { getSessionToken, validateSessionToken } from "@/utils/pass-through";
 
 type AccessRequestBody = {
   clinicianUsername?: string;
   customerEmail?: string;
 };
 
-function isAuthenticated(request: Request): boolean {
-  return Boolean(getSessionToken(request));
+async function getAuthErrorResponse(
+  request: Request,
+  customerEmail: string,
+): Promise<Response | null> {
+  const token = getSessionToken(request);
+
+  if (!token) {
+    return new Response("Unauthorized", {
+      status: 401,
+    });
+  }
+
+  const isValidSession = await validateSessionToken(token, customerEmail);
+
+  if (!isValidSession) {
+    return new Response("Forbidden", {
+      status: 403,
+    });
+  }
+
+  return null;
 }
 async function readRequestBody(
   request: Request,
@@ -21,12 +40,6 @@ async function readRequestBody(
 
 export async function POST(request: Request) {
   try {
-    if (!isAuthenticated(request)) {
-      return new Response("Unauthorized", {
-        status: 401,
-      });
-    }
-
     const body = await readRequestBody(request);
 
     if (!body) {
@@ -45,6 +58,12 @@ export async function POST(request: Request) {
           status: 400,
         },
       );
+    }
+
+    const authError = await getAuthErrorResponse(request, customerEmail);
+
+    if (authError) {
+      return authError;
     }
 
     await prisma.clinicianAccessRequest.upsert({
@@ -79,12 +98,6 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    if (!isAuthenticated(request)) {
-      return new Response("Unauthorized", {
-        status: 401,
-      });
-    }
-
     const body = await readRequestBody(request);
 
     if (!body) {
@@ -103,6 +116,12 @@ export async function DELETE(request: Request) {
           status: 400,
         },
       );
+    }
+
+    const authError = await getAuthErrorResponse(request, customerEmail);
+
+    if (authError) {
+      return authError;
     }
 
     const result = await prisma.clinicianAccessRequest.deleteMany({
