@@ -8,6 +8,12 @@
 | **Source**       | PRFAQ 1.4 — IVR Prototype                                   |
 | **Last updated** | July 2, 2026                                                |
 
+> **MVP authentication decision — July 28, 2026:** The implemented prototype
+> authenticates with a spoken first and last name plus an eight-digit date of
+> birth entered by keypad. This decision supersedes the SMS OTP requirements in
+> this draft for the current MVP. Failed name/DOB verification is limited to
+> three attempts.
+
 
 ---
 
