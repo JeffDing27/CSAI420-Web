@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
 
+function normalizeHeaderKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function isSureStepsTokenHeader(headerName: string): boolean {
+  return normalizeHeaderKey(headerName) === "surestepssessiontoken";
+}
+
 /**
  * Finds the SureSteps session token in either:
  * 1. The normal incoming request headers, or
@@ -7,13 +15,10 @@ import { NextResponse } from "next/server";
  */
 export function getSessionToken(request: Request): string | null {
   // Only trust explicit incoming headers from the client request.
-  const directToken =
-    request.headers.get("suresteps.session.token") ??
-    request.headers.get("suresteps-session-token") ??
-    request.headers.get("x-suresteps-session-token");
-
-  if (directToken?.trim()) {
-    return directToken.trim();
+  for (const [headerName, headerValue] of request.headers.entries()) {
+    if (isSureStepsTokenHeader(headerName) && headerValue.trim()) {
+      return headerValue.trim();
+    }
   }
 
   // On Vercel, custom headers may be preserved in this metadata blob.
@@ -34,14 +39,7 @@ export function getSessionToken(request: Request): string | null {
     const secureHeaders = parsed as Record<string, unknown>;
 
     for (const [headerName, rawValue] of Object.entries(secureHeaders)) {
-      const normalizedName = headerName.toLowerCase();
-
-      const isSureStepsTokenHeader =
-        normalizedName === "suresteps.session.token" ||
-        normalizedName === "suresteps-session-token" ||
-        normalizedName === "x-suresteps-session-token";
-
-      if (!isSureStepsTokenHeader) {
+      if (!isSureStepsTokenHeader(headerName)) {
         continue;
       }
 
