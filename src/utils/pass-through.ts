@@ -15,6 +15,52 @@ export function getSessionToken(request: Request): string | null {
   if (directToken?.trim()) {
     return directToken.trim();
   }
+
+  // On Vercel, custom headers may be preserved in this metadata blob.
+  // Only accept explicit SureSteps token headers here (never Authorization).
+  const secureHeadersValue = request.headers.get("x-vercel-sc-headers");
+
+  if (!secureHeadersValue) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(secureHeadersValue) as unknown;
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+
+    const secureHeaders = parsed as Record<string, unknown>;
+
+    for (const [headerName, rawValue] of Object.entries(secureHeaders)) {
+      const normalizedName = headerName.toLowerCase();
+
+      const isSureStepsTokenHeader =
+        normalizedName === "suresteps.session.token" ||
+        normalizedName === "suresteps-session-token" ||
+        normalizedName === "x-suresteps-session-token";
+
+      if (!isSureStepsTokenHeader) {
+        continue;
+      }
+
+      if (typeof rawValue === "string" && rawValue.trim()) {
+        return rawValue.trim();
+      }
+
+      if (
+        Array.isArray(rawValue) &&
+        typeof rawValue[0] === "string" &&
+        rawValue[0].trim()
+      ) {
+        return rawValue[0].trim();
+      }
+    }
+  } catch {
+    console.error("[Auth] Unable to parse x-vercel-sc-headers");
+  }
+
   return null;
 }
 
