@@ -13,6 +13,19 @@ enum Role {
   ADMIN
 }
 
+enum DeviceStatus {
+  UNASSIGNED
+  ASSIGNED
+  RETIRED
+}
+
+enum DeviceAssignmentMethod {
+  MOBILE
+  IVR
+  CLINICIAN
+  ADMIN
+}
+
 model User {
   id             String   @id @default(uuid())
   userName       String   @unique
@@ -35,6 +48,7 @@ model User {
   escalations    Escalation[]
   pushTokens     PushToken[]
   auditEvents    AuditEvent[]
+  deviceAssignments DeviceAssignment[]
 }
 
 model AuthSession {
@@ -97,6 +111,7 @@ enum TestSource {
   IVR
   MOCK
   EXTERNAL
+  DEVICE
 }
 
 model RapidStepTest {
@@ -107,8 +122,10 @@ model RapidStepTest {
   source         TestSource
   createdAt      DateTime   @default(now())
   completedAt    DateTime?
+  deviceRecordId String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device Device? @relation(fields: [deviceRecordId], references: [id])
 }
 
 enum ResponsePreference {
@@ -327,4 +344,32 @@ model AuditEvent {
   createdAt    DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Device {
+  id              String             @id @default(uuid())
+  deviceId        String             @unique
+  claimCodeHash   String             @unique
+  deviceTokenHash String             @unique
+  status          DeviceStatus       @default(UNASSIGNED)
+  lastSeenAt      DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  assignments     DeviceAssignment[]
+  rapidStepTests  RapidStepTest[]
+}
+
+model DeviceAssignment {
+  id             String                 @id @default(uuid())
+  deviceRecordId String
+  userId         String
+  method         DeviceAssignmentMethod
+  assignedAt     DateTime               @default(now())
+  unassignedAt   DateTime?
+
+  device         Device                 @relation(fields: [deviceRecordId], references: [id])
+  user           User                   @relation(fields: [userId], references: [id])
+
+  @@index([deviceRecordId])
+  @@index([userId])
 }

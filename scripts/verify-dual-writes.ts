@@ -129,7 +129,8 @@ async function main() {
       externalTestId: "ext-123",
       testData: { score: 10 },
       source: "MOCK",
-      completedAt: new Date()
+      completedAt: new Date(),
+      deviceRecordId: null,
     });
     const dbRst = await prisma.rapidStepTest.findUnique({ where: { id: rst.id } });
     if (!dbRst) throw new Error("RapidStepTest dual-write failed");
