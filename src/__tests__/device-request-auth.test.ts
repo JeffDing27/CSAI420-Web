@@ -64,10 +64,10 @@ describe('device-request-auth', () => {
   it('returns authenticated device when credentials are valid', async () => {
     const mockDevice = { id: 'd1', deviceId: 'DEV-1', status: DeviceStatus.ASSIGNED };
     (DeviceService.authenticateDevice as any).mockResolvedValue(mockDevice);
-    
+
     const req = createRequest({ 'x-stedi-device-id': 'DEV-1', 'x-stedi-device-token': 'token1' });
     const res = await authenticateDeviceRequest(req);
-    
+
     expect(res).toEqual({ type: 'authenticated', device: mockDevice });
     expect(DeviceService.authenticateDevice).toHaveBeenCalledWith({
       deviceId: 'DEV-1',

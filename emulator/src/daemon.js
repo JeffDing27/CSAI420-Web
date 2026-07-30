@@ -134,10 +134,10 @@ export function createDaemon(options = {}) {
       ...currentState,
       heartbeatActive: heartbeatTimer !== null,
     };
-    
+
     status.deviceTokenConfigured = !!status.deviceToken;
     delete status.deviceToken;
-    
+
     return status;
   }
 
