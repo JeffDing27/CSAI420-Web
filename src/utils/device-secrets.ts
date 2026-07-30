@@ -9,9 +9,24 @@ function getPepper(): string {
     return process.env.DEVICE_CLAIM_PEPPER;
   }
   if (process.env.NODE_ENV === 'production') {
-    console.warn('WARNING: DEVICE_CLAIM_PEPPER is absent in production. This is a security risk.');
+    throw new Error('DEVICE_CLAIM_PEPPER is missing in production');
   }
   return FALLBACK_PEPPER;
+}
+
+export function normalizeDeviceId(deviceId: string): string {
+  if (typeof deviceId !== 'string') {
+    throw new Error('Invalid deviceId format');
+  }
+  const normalized = deviceId.trim().toUpperCase();
+  if (!normalized) {
+    throw new Error('Device ID cannot be empty');
+  }
+  const regex = /^[A-Z0-9][A-Z0-9_-]{2,63}$/;
+  if (!regex.test(normalized)) {
+    throw new Error('Invalid deviceId format');
+  }
+  return normalized;
 }
 
 export function generateClaimCode(): string {

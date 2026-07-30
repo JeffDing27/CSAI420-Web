@@ -5,15 +5,13 @@ import {
   generateDeviceToken,
   hashClaimCode,
   hashDeviceToken,
-  verifyDeviceToken
+  verifyDeviceToken,
+  normalizeDeviceId
 } from '../utils/device-secrets';
 
 export class DeviceService {
   static async provisionDevice({ deviceId }: { deviceId: string }) {
-    if (!deviceId || typeof deviceId !== 'string') {
-      throw new Error('Invalid deviceId');
-    }
-    const normalizedDeviceId = deviceId.trim().toUpperCase();
+    const normalizedDeviceId = normalizeDeviceId(deviceId);
     
     const existing = await prisma.device.findUnique({
       where: { deviceId: normalizedDeviceId }
@@ -23,20 +21,39 @@ export class DeviceService {
       throw new Error('Device already provisioned');
     }
     
-    const claimCode = generateClaimCode();
-    const deviceToken = generateDeviceToken();
-    
-    const claimCodeHash = hashClaimCode(claimCode);
-    const deviceTokenHash = hashDeviceToken(deviceToken);
-    
-    const device = await prisma.device.create({
-      data: {
-        deviceId: normalizedDeviceId,
-        claimCodeHash,
-        deviceTokenHash,
-        status: DeviceStatus.UNASSIGNED,
+    let claimCode = '';
+    let deviceToken = '';
+    let device = null;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (attempts < maxAttempts) {
+      claimCode = generateClaimCode();
+      deviceToken = generateDeviceToken();
+      const claimCodeHash = hashClaimCode(claimCode);
+      const deviceTokenHash = hashDeviceToken(deviceToken);
+      try {
+        device = await prisma.device.create({
+          data: {
+            deviceId: normalizedDeviceId,
+            claimCodeHash,
+            deviceTokenHash,
+            status: DeviceStatus.UNASSIGNED,
+          }
+        });
+        break;
+      } catch (error: any) {
+        if (error.code === 'P2002' && error.meta?.target?.includes('claimCodeHash')) {
+          attempts++;
+        } else {
+          throw error;
+        }
       }
-    });
+    }
+
+    if (!device) {
+      throw new Error('Failed to generate a unique claim code');
+    }
     
     return {
       device,
@@ -74,7 +91,7 @@ export class DeviceService {
       
       if (activeAssignment) {
         if (activeAssignment.userId === userId) {
-          return { device, assignment: activeAssignment };
+          return { device, assignment: activeAssignment, isNew: false };
         } else {
           throw new Error('Device is already assigned to another patient');
         }
@@ -93,12 +110,12 @@ export class DeviceService {
         data: { status: DeviceStatus.ASSIGNED }
       });
       
-      return { device: updatedDevice, assignment };
+      return { device: updatedDevice, assignment, isNew: true };
     });
   }
 
   static async unassignDevice({ deviceId, userId }: { deviceId: string, userId?: string }) {
-    const normalizedDeviceId = deviceId.trim().toUpperCase();
+    const normalizedDeviceId = normalizeDeviceId(deviceId);
     
     return await prisma.$transaction(async (tx) => {
       const device = await tx.device.findUnique({
@@ -139,7 +156,7 @@ export class DeviceService {
   }
 
   static async authenticateDevice({ deviceId, deviceToken }: { deviceId: string, deviceToken: string }) {
-    const normalizedDeviceId = deviceId.trim().toUpperCase();
+    const normalizedDeviceId = normalizeDeviceId(deviceId);
     const device = await prisma.device.findUnique({
       where: { deviceId: normalizedDeviceId }
     });
@@ -167,6 +184,24 @@ export class DeviceService {
       },
       include: {
         user: true
+      }
+    });
+  }
+
+  static async getActiveAssignmentsForUser(userId: string) {
+    return await prisma.deviceAssignment.findMany({
+      where: {
+        userId,
+        unassignedAt: null
+      },
+      include: {
+        device: {
+          select: {
+            deviceId: true,
+            status: true,
+            lastSeenAt: true,
+          }
+        }
       }
     });
   }
