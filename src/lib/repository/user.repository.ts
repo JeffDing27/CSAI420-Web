@@ -35,6 +35,7 @@ export class UserRepository {
           phone: kvUser.phone,
           birthDate: kvUser.birthDate,
           region: kvUser.region,
+          role: kvUser.role || "PATIENT",
           passwordHash: kvUser.passwordHash,
           passwordSalt: kvUser.passwordSalt,
           externalUserId: null,
@@ -89,6 +90,7 @@ export class UserRepository {
         id: createdUser ? createdUser.id : crypto.randomUUID(),
       };
       await kvSet(`user:${data.email}`, kvData);
+      await kvSet(`user-id:${kvData.id}`, kvData);
 
       if (provider === "kv") {
         createdUser = {
@@ -101,5 +103,43 @@ export class UserRepository {
     }
 
     return createdUser!;
+  }
+  static async findById(id: string): Promise<User | null> {
+    const provider = process.env.STORAGE_PROVIDER || "kv";
+
+    if (provider === "supabase" || provider === "dual") {
+      const user = await prisma.user.findUnique({
+        where: { id },
+      });
+
+      if (provider === "supabase" || user) {
+        return user;
+      }
+    }
+
+    if (provider === "kv" || provider === "dual") {
+      const kvUser = await kvGet<any>(`user-id:${id}`);
+
+      if (kvUser) {
+        return {
+          id: kvUser.id,
+          userName: kvUser.userName,
+          email: kvUser.email,
+          firstName: kvUser.firstName || "",
+          lastName: kvUser.lastName || "",
+          phone: kvUser.phone,
+          birthDate: kvUser.birthDate,
+          region: kvUser.region,
+          role: kvUser.role || "PATIENT",
+          passwordHash: kvUser.passwordHash,
+          passwordSalt: kvUser.passwordSalt,
+          externalUserId: null,
+          createdAt: new Date(kvUser.createdAt || Date.now()),
+          updatedAt: new Date(kvUser.updatedAt || Date.now()),
+        };
+      }
+    }
+
+    return null;
   }
 }
