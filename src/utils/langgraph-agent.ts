@@ -2,10 +2,12 @@ import {
   AIMessage,
   type BaseMessage,
   HumanMessage,
+  SystemMessage,
 } from "@langchain/core/messages";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
 
+// RAG Repo imported but unused currently due to fake RAG removal
 import { RepositoryFactory } from "@/repositories/provider-factory";
 
 const StateAnnotation = Annotation.Root({
@@ -16,7 +18,16 @@ const StateAnnotation = Annotation.Root({
   sessionId: Annotation<string>(),
 });
 
-function callModel(state: typeof StateAnnotation.State) {
+async function callModel(state: typeof StateAnnotation.State) {
+  const systemPrompt = new SystemMessage(
+    "You are a Mobility Coach providing general mobility and exercise education. " +
+      "You do not diagnose conditions, and you do not replace a healthcare professional. " +
+      "You must not invent personal test scores or medical records. " +
+      "Recommend professional help when appropriate. Do not claim that a human coach or clinician has been contacted.",
+  );
+
+  const messages = [systemPrompt, ...state.messages];
+
   if (
     process.env.OPENAI_ENABLED !== "true" ||
     !process.env.OPENAI_API_KEY ||
@@ -33,34 +44,18 @@ function callModel(state: typeof StateAnnotation.State) {
     return { messages: [new AIMessage(mockReply)] };
   }
 
-  // Real OpenAI call (commented out the actual invoke to avoid errors during static tests if OPENAI_ENABLED is mistakenly true)
-  // const model = new ChatOpenAI({ modelName: "gpt-4" });
-  // const response = await model.invoke(state.messages);
-  // return { messages: [response] };
-
-  return {
-    messages: [new AIMessage("OpenAI real implementation placeholder")],
-  };
+  const model = new ChatOpenAI({
+    modelName: process.env.OPENAI_MODEL || "gpt-4o-mini",
+  });
+  const response = await model.invoke(messages);
+  return { messages: [response] };
 }
 
 async function retrieveContext(state: typeof StateAnnotation.State) {
   const lastMessage = state.messages[state.messages.length - 1];
-  const ragRepo = RepositoryFactory.getRagRepository();
 
-  // If OPENAI_ENABLED is true, we would use an embedding model to vectorize the human query
-  // For now, we simulate embedding extraction or fallback to string matching
-  
-  try {
-    // We pass a dummy embedding if OpenAI is disabled, or a real one if enabled
-    const mockEmbedding = [0.1, 0.2, 0.3];
-    const chunks = await ragRepo.similaritySearch(mockEmbedding, 3);
-    if (chunks && chunks.length > 0) {
-      const context = chunks.map(c => c.content).join("\n");
-      return { context };
-    }
-  } catch (e) {
-    console.error("RAG retrieval failed:", e);
-  }
+  // Explicit development fallback: Dummy similarity search is disabled to prevent fake context
+  // Real vector embeddings will be implemented in a future ticket.
 
   if (lastMessage.content.toString().toLowerCase().includes("stedi")) {
     return { context: "STEDI is a platform for fall risk assessment." };
