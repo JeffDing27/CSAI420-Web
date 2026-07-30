@@ -9,8 +9,7 @@ import {
 
 const ALLOWED_CONFIG_KEYS = new Set([
   "deviceId",
-  "customer",
-  "sessionToken",
+  "deviceToken",
   "targetBaseUrl",
   "heartbeatIntervalMs",
 ]);
@@ -130,11 +129,16 @@ export function createDaemon(options = {}) {
 
   async function getStatus() {
     const currentState = await stateStore.readState();
-    return {
+    const status = {
       ...createDefaultState(),
       ...currentState,
       heartbeatActive: heartbeatTimer !== null,
     };
+    
+    status.deviceTokenConfigured = !!status.deviceToken;
+    delete status.deviceToken;
+    
+    return status;
   }
 
   async function handleRequest(request, response) {

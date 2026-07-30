@@ -9,6 +9,21 @@ import {
   normalizeDeviceId
 } from '../utils/device-secrets';
 
+function isP2002Conflict(error: any, fieldName: string): boolean {
+  if (error?.code !== 'P2002') return false;
+  const target = error?.meta?.target;
+  
+  if (Array.isArray(target)) {
+    return target.some(t => typeof t === 'string' && t.includes(fieldName));
+  }
+  
+  if (typeof target === 'string') {
+    return target.includes(fieldName);
+  }
+  
+  return false;
+}
+
 export class DeviceService {
   static async provisionDevice({ deviceId }: { deviceId: string }) {
     const normalizedDeviceId = normalizeDeviceId(deviceId);
@@ -20,6 +35,8 @@ export class DeviceService {
     if (existing) {
       throw new Error('Device already provisioned');
     }
+    
+    // Relying on Prisma P2002 to catch concurrent provisioning
     
     let claimCode = '';
     let deviceToken = '';
@@ -43,8 +60,10 @@ export class DeviceService {
         });
         break;
       } catch (error: any) {
-        if (error.code === 'P2002' && error.meta?.target?.includes('claimCodeHash')) {
+        if (isP2002Conflict(error, 'claimCodeHash') || isP2002Conflict(error, 'deviceTokenHash')) {
           attempts++;
+        } else if (isP2002Conflict(error, 'deviceId')) {
+          throw new Error('Device already provisioned');
         } else {
           throw error;
         }
@@ -81,37 +100,55 @@ export class DeviceService {
       throw new Error('Device is retired');
     }
     
-    return await prisma.$transaction(async (tx) => {
-      const activeAssignment = await tx.deviceAssignment.findFirst({
-        where: {
-          deviceRecordId: device.id,
-          unassignedAt: null
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const activeAssignment = await tx.deviceAssignment.findFirst({
+          where: {
+            deviceRecordId: device.id,
+            unassignedAt: null
+          }
+        });
+        
+        if (activeAssignment) {
+          if (activeAssignment.userId === userId) {
+            return { device, assignment: activeAssignment, isNew: false };
+          } else {
+            throw new Error('Device is already assigned to another patient');
+          }
         }
+        
+        const assignment = await tx.deviceAssignment.create({
+          data: {
+            deviceRecordId: device.id,
+            userId,
+            method
+          }
+        });
+        
+        const updatedDevice = await tx.device.update({
+          where: { id: device.id },
+          data: { status: DeviceStatus.ASSIGNED }
+        });
+        
+        return { device: updatedDevice, assignment, isNew: true };
       });
-      
-      if (activeAssignment) {
-        if (activeAssignment.userId === userId) {
+    } catch (error: any) {
+      // If concurrent request won the race, Prisma throws P2002 on the partial unique index
+      if (isP2002Conflict(error, 'deviceRecordId') || isP2002Conflict(error, 'DeviceAssignment_deviceRecordId_key') || isP2002Conflict(error, 'deviceAssignment')) {
+        const activeAssignment = await prisma.deviceAssignment.findFirst({
+          where: {
+            deviceRecordId: device.id,
+            unassignedAt: null
+          }
+        });
+        if (activeAssignment && activeAssignment.userId === userId) {
           return { device, assignment: activeAssignment, isNew: false };
         } else {
           throw new Error('Device is already assigned to another patient');
         }
       }
-      
-      const assignment = await tx.deviceAssignment.create({
-        data: {
-          deviceRecordId: device.id,
-          userId,
-          method
-        }
-      });
-      
-      const updatedDevice = await tx.device.update({
-        where: { id: device.id },
-        data: { status: DeviceStatus.ASSIGNED }
-      });
-      
-      return { device: updatedDevice, assignment, isNew: true };
-    });
+      throw error;
+    }
   }
 
   static async unassignDevice({ deviceId, userId }: { deviceId: string, userId?: string }) {
@@ -202,6 +239,19 @@ export class DeviceService {
             lastSeenAt: true,
           }
         }
+      }
+    });
+  }
+
+  static async recordHeartbeat({ deviceRecordId, receivedAt }: { deviceRecordId: string, receivedAt: Date }) {
+    return await prisma.device.update({
+      where: { id: deviceRecordId },
+      data: { lastSeenAt: receivedAt },
+      select: {
+        id: true,
+        deviceId: true,
+        status: true,
+        lastSeenAt: true
       }
     });
   }

@@ -7,6 +7,7 @@ This emulator replaces the physical STEDI device during development by running o
 - Persists per-container device configuration.
 - Starts and stops a 3-second heartbeat loop with `stedi-sim on` and `stedi-sim off`.
 - Sends randomized `rapidsteptest` payloads through the base URL configured in `emulator/.env` with `stedi-sim send-steps`.
+- Authenticates requests directly using device credentials instead of patient session tokens.
 - Exposes status through the app routes added in this repo: `POST /sensorUpdates` and `GET /devices/updates/recent`.
 
 ## Base URL configuration
@@ -21,17 +22,23 @@ STEDI_SIM_TARGET_BASE_URL=http://localhost:3000
 
 When the emulator runs inside Docker, `localhost` and `127.0.0.1` are automatically remapped to `host.docker.internal`, so the same default works against a Next.js server running on your macOS host.
 
-If you prefer to make the Docker target explicit, change it to:
+## Device Provisioning Workflow
 
-```bash
-STEDI_SIM_TARGET_BASE_URL=http://host.docker.internal:3000
-```
+1. Start backend.
+2. Configure `DEVICE_CLAIM_PEPPER`.
+3. Configure `DEVICE_PROVISIONING_KEY` on the backend.
+4. Configure matching `STEDI_SIM_PROVISIONING_KEY` only in the emulator development environment (e.g. `emulator/.env`).
+5. Run `stedi-sim provision STEDI-007`.
+6. Copy the displayed claim code.
+7. Claim the device through `POST /devices/claim` using a patient session, or later through the Twilio IVR service.
+8. Run `stedi-sim on`.
+9. Run `stedi-sim send-steps`.
+10. Confirm the data was stored under the assigned patient.
 
-If your Docker runtime uses a different host alias, set this too:
-
-```bash
-STEDI_SIM_HOST_ALIAS=host.docker.internal
-```
+Note:
+- The provisioning key is an administrative/development secret.
+- The patient never receives the device token.
+- The device does not need a mobile app after it has been assigned.
 
 ## Build
 
@@ -43,41 +50,21 @@ docker build -f emulator/Dockerfile -t stedi-sim .
 
 ```bash
 docker run -d --name stedi-sim-007 stedi-sim
-docker exec -it stedi-sim-007 stedi-sim set-device-id 007
-docker exec -it stedi-sim-007 stedi-sim set customer user@test.com
-docker exec -it stedi-sim-007 stedi-sim set session-token your-session-token
+docker exec -it stedi-sim-007 stedi-sim provision STEDI-007
+# Save the printed claimCode
 docker exec -it stedi-sim-007 stedi-sim on
 docker exec -it stedi-sim-007 stedi-sim status
 docker exec -it stedi-sim-007 stedi-sim send-steps
 docker exec -it stedi-sim-007 stedi-sim off
 ```
 
-## Run multiple instances
-
-```bash
-docker run -d --name stedi-sim-007 stedi-sim
-docker run -d --name stedi-sim-008 stedi-sim
-
-docker exec -it stedi-sim-007 stedi-sim set-device-id 007
-docker exec -it stedi-sim-007 stedi-sim set customer user007@test.com
-docker exec -it stedi-sim-007 stedi-sim set session-token token-007
-docker exec -it stedi-sim-007 stedi-sim on
-
-docker exec -it stedi-sim-008 stedi-sim set-device-id 008
-docker exec -it stedi-sim-008 stedi-sim set customer user008@test.com
-docker exec -it stedi-sim-008 stedi-sim set session-token token-008
-docker exec -it stedi-sim-008 stedi-sim off
-```
-
-Only the powered-on container will continue posting heartbeats every 3 seconds.
-
 ## Supported commands
 
 ```bash
 stedi-sim set-device-id <deviceId>
-stedi-sim set customer <email>
-stedi-sim set session-token <token>
+stedi-sim set device-token <token>
 stedi-sim set target-base-url <url>
+stedi-sim provision <deviceId>
 stedi-sim on
 stedi-sim off
 stedi-sim status
@@ -86,8 +73,7 @@ stedi-sim send-steps
 
 ## Notes
 
-- `send-steps` requires `deviceId`, `customer`, and `sessionToken`.
+- `send-steps` requires `deviceId` and `deviceToken`.
 - `targetBaseUrl` defaults from `emulator/.env`, and `stedi-sim set target-base-url <url>` still lets you override it per instance.
 - Inside Docker, loopback targets such as `http://localhost:3000` are automatically rewritten to the host alias so the container can reach a dev server running on the host.
-- Heartbeats are app-local for development status tracking; `rapidsteptest` still forwards upstream for scoring.
 - State is stored inside the container at `/app/emulator/.stedi-sim/state.json` by default.

@@ -1,13 +1,16 @@
 import fs from "node:fs";
 import { buildRapidStepPayload } from "./rapid-step-payload.js";
 
-function buildHeaders(sessionToken) {
+function buildHeaders(state) {
   const headers = {
     "content-type": "application/json",
   };
 
-  if (sessionToken) {
-    headers["suresteps.session.token"] = sessionToken;
+  if (state.deviceId) {
+    headers["x-stedi-device-id"] = state.deviceId;
+  }
+  if (state.deviceToken) {
+    headers["x-stedi-device-token"] = state.deviceToken;
   }
 
   return headers;
@@ -46,7 +49,6 @@ async function parseResponseBody(response) {
 export async function sendHeartbeat(state, options = {}) {
   const fetchImpl = options.fetchImpl ?? fetch;
   const payload = {
-    customer: state.customer,
     deviceId: state.deviceId,
     poweredOn: state.powerState === "on",
     recordedAt: options.now ?? Date.now(),
@@ -56,7 +58,7 @@ export async function sendHeartbeat(state, options = {}) {
     resolveUrl(state.targetBaseUrl, "/sensorUpdates", options),
     {
       method: "POST",
-      headers: buildHeaders(state.sessionToken),
+      headers: buildHeaders(state),
       body: JSON.stringify(payload),
     },
   );
@@ -72,7 +74,6 @@ export async function sendRapidStepTest(state, options = {}) {
   const fetchImpl = options.fetchImpl ?? fetch;
   const payload = buildRapidStepPayload(
     {
-      customer: state.customer,
       deviceId: state.deviceId,
     },
     {
@@ -85,7 +86,7 @@ export async function sendRapidStepTest(state, options = {}) {
     resolveUrl(state.targetBaseUrl, "/rapidsteptest", options),
     {
       method: "POST",
-      headers: buildHeaders(state.sessionToken),
+      headers: buildHeaders(state),
       body: JSON.stringify(payload),
     },
   );

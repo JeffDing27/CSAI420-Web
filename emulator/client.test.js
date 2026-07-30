@@ -26,17 +26,16 @@ describe("emulator client base URL normalization", () => {
 });
 
 describe("emulator client", () => {
-  it("posts heartbeats to /sensorUpdates with the session token header", async () => {
+  it("posts heartbeats to /sensorUpdates with device headers", async () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValue(new Response("Saved", { status: 200 }));
 
     const result = await sendHeartbeat(
       {
-        customer: "user@test.com",
         deviceId: "007",
+        deviceToken: "token-123",
         powerState: "on",
-        sessionToken: "token-123",
         targetBaseUrl: "https://stedi-voice.vercel.app",
       },
       {
@@ -48,9 +47,10 @@ describe("emulator client", () => {
     expect(fetchImpl).toHaveBeenCalledOnce();
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe("https://stedi-voice.vercel.app/sensorUpdates");
-    expect(init.headers["suresteps.session.token"]).toBe("token-123");
+    expect(init.headers["x-stedi-device-id"]).toBe("007");
+    expect(init.headers["x-stedi-device-token"]).toBe("token-123");
+    expect(init.headers["suresteps.session.token"]).toBeUndefined();
     expect(JSON.parse(init.body)).toMatchObject({
-      customer: "user@test.com",
       deviceId: "007",
       poweredOn: true,
       recordedAt: 1_700_000_000_000,
@@ -66,9 +66,8 @@ describe("emulator client", () => {
 
     const result = await sendRapidStepTest(
       {
-        customer: "user@test.com",
         deviceId: "007",
-        sessionToken: "token-123",
+        deviceToken: "token-123",
         targetBaseUrl: "https://stedi-voice.vercel.app",
       },
       {
@@ -81,9 +80,10 @@ describe("emulator client", () => {
     expect(fetchImpl).toHaveBeenCalledOnce();
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe("https://stedi-voice.vercel.app/rapidsteptest");
-    expect(init.headers["suresteps.session.token"]).toBe("token-123");
+    expect(init.headers["x-stedi-device-id"]).toBe("007");
+    expect(init.headers["x-stedi-device-token"]).toBe("token-123");
+    expect(init.headers["suresteps.session.token"]).toBeUndefined();
     const payload = JSON.parse(init.body);
-    expect(payload.customer).toBe("user@test.com");
     expect(payload.deviceId).toBe("007");
     expect(payload.testTime).toBe(payload.stopTime - payload.startTime);
     expect(payload.totalSteps).toBe(payload.stepPoints.length);
@@ -98,9 +98,8 @@ describe("emulator client", () => {
 
     await sendRapidStepTest(
       {
-        customer: "user@test.com",
         deviceId: "007",
-        sessionToken: "token-123",
+        deviceToken: "token-123",
         targetBaseUrl: "http://localhost:3000",
       },
       {

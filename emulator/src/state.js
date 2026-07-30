@@ -18,8 +18,7 @@ export function getDefaultTargetBaseUrl() {
 export function createDefaultState() {
   return {
     deviceId: null,
-    customer: null,
-    sessionToken: null,
+    deviceToken: null,
     targetBaseUrl: getDefaultTargetBaseUrl(),
     powerState: "off",
     heartbeatIntervalMs: DEFAULT_HEARTBEAT_INTERVAL_MS,
@@ -88,6 +87,7 @@ export async function writeState(nextState) {
   await fs.writeFile(
     getStateFilePath(),
     `${JSON.stringify(persistedState, null, 2)}\n`,
+    { mode: 0o600 }
   );
   return normalizedState;
 }

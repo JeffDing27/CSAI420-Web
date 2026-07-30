@@ -34,25 +34,32 @@ describe("CLI parsing", () => {
   });
 
   it("parses nested set commands", () => {
-    expect(parseCommand(["set", "customer", "user@test.com"])).toEqual({
-      key: "customer",
+    expect(parseCommand(["set", "device-token", "my-token"])).toEqual({
+      key: "deviceToken",
       type: "set",
-      value: "user@test.com",
+      value: "my-token",
+    });
+  });
+
+  it("parses provision", () => {
+    expect(parseCommand(["provision", "007"])).toEqual({
+      type: "provision",
+      deviceId: "007"
     });
   });
 });
 
 describe("CLI execution", () => {
-  it("sends config updates through the control API", async () => {
+  it("sends config updates through the control API and redacts token", async () => {
     const capture = createOutputCapture();
     const fetchImpl = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ customer: "user@test.com" }), {
+      new Response(JSON.stringify({ deviceToken: "my-token" }), {
         status: 200,
         headers: { "content-type": "application/json" },
       }),
     );
 
-    const exitCode = await runCli(["set", "customer", "user@test.com"], {
+    const exitCode = await runCli(["set", "device-token", "my-token"], {
       fetchImpl,
       output: capture.output,
     });
@@ -60,7 +67,8 @@ describe("CLI execution", () => {
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledOnce();
     const { stdout } = capture.read();
-    expect(stdout).toContain("customer=user@test.com");
+    expect(stdout).toContain("deviceToken=configured");
+    expect(stdout).not.toContain("my-token");
   });
 
   it("reports missing configuration before send-steps", async () => {
@@ -69,17 +77,15 @@ describe("CLI execution", () => {
     const exitCode = await runCli(["send-steps"], {
       output: capture.output,
       readStateFn: async () => ({
-        customer: null,
         deviceId: null,
-        sessionToken: null,
+        deviceToken: null,
       }),
     });
 
     expect(exitCode).toBe(1);
     const { stderr } = capture.read();
     expect(stderr).toContain("deviceId");
-    expect(stderr).toContain("customer");
-    expect(stderr).toContain("sessionToken");
+    expect(stderr).toContain("deviceToken");
   });
 
   it("succeeds when send-steps returns a 2xx response", async () => {
@@ -92,9 +98,8 @@ describe("CLI execution", () => {
     const exitCode = await runCli(["send-steps"], {
       output: capture.output,
       readStateFn: async () => ({
-        customer: "user@test.com",
         deviceId: "007",
-        sessionToken: "token-123",
+        deviceToken: "token-123",
         targetBaseUrl: "https://stedi-voice.vercel.app",
       }),
       sendRapidStepTestFn,
@@ -117,9 +122,8 @@ describe("CLI execution", () => {
     const exitCode = await runCli(["send-steps"], {
       output: capture.output,
       readStateFn: async () => ({
-        customer: "user@test.com",
         deviceId: "007",
-        sessionToken: "token-123",
+        deviceToken: "token-123",
         targetBaseUrl: "https://stedi-voice.vercel.app",
       }),
       sendRapidStepTestFn,
@@ -136,10 +140,9 @@ describe("CLI config validation", () => {
   it("finds missing send-steps config fields", () => {
     expect(
       findMissingStepConfig({
-        customer: null,
         deviceId: "007",
-        sessionToken: null,
+        deviceToken: null,
       }),
-    ).toEqual(["customer", "sessionToken"]);
+    ).toEqual(["deviceToken"]);
   });
 });

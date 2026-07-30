@@ -6,9 +6,9 @@ import { readState } from "./state.js";
 
 const HELP_TEXT = `Usage:
   stedi-sim set-device-id <deviceId>
-  stedi-sim set customer <email>
-  stedi-sim set session-token <token>
+  stedi-sim set device-token <token>
   stedi-sim set target-base-url <url>
+  stedi-sim provision <deviceId>
   stedi-sim on
   stedi-sim off
   stedi-sim status
@@ -22,10 +22,8 @@ function getControlBaseUrl() {
 
 function mapSetField(field) {
   switch (field) {
-    case "customer":
-      return "customer";
-    case "session-token":
-      return "sessionToken";
+    case "device-token":
+      return "deviceToken";
     case "target-base-url":
       return "targetBaseUrl";
     default:
@@ -46,6 +44,13 @@ export function parseCommand(argv) {
     }
 
     return { key: "deviceId", type: "set", value: rest[0] };
+  }
+
+  if (command === "provision") {
+    if (rest.length !== 1) {
+      throw new Error("provision requires exactly one device ID");
+    }
+    return { type: "provision", deviceId: rest[0] };
   }
 
   if (command === "set") {
@@ -81,11 +86,8 @@ export function findMissingStepConfig(state) {
   if (!state.deviceId) {
     missing.push("deviceId");
   }
-  if (!state.customer) {
-    missing.push("customer");
-  }
-  if (!state.sessionToken) {
-    missing.push("sessionToken");
+  if (!state.deviceToken) {
+    missing.push("deviceToken");
   }
 
   return missing;
@@ -136,7 +138,48 @@ export async function runCli(argv, dependencies = {}) {
       body: JSON.stringify({ key: command.key, value: command.value }),
       method: "POST",
     });
-    output.stdout.write(`${command.key}=${state[command.key]}\n`);
+    if (command.key === "deviceToken") {
+      output.stdout.write(`deviceToken=configured\n`);
+    } else {
+      output.stdout.write(`${command.key}=${state[command.key]}\n`);
+    }
+    return 0;
+  }
+
+  if (command.type === "provision") {
+    const provisioningKey = process.env.STEDI_SIM_PROVISIONING_KEY;
+    if (!provisioningKey) {
+      output.stderr.write("STEDI_SIM_PROVISIONING_KEY environment variable is missing\n");
+      return 1;
+    }
+    const state = await readStateFn();
+    const targetUrl = state.targetBaseUrl || getControlBaseUrl();
+    const res = await fetchImpl(new URL("/devices/provision", targetUrl), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-device-provisioning-key": provisioningKey
+      },
+      body: JSON.stringify({ deviceId: command.deviceId })
+    });
+    const text = await res.text();
+    const parsed = text ? JSON.parse(text) : {};
+
+    if (!res.ok) {
+      output.stderr.write(`Provisioning failed: ${res.status}\n`);
+      return 1;
+    }
+
+    await callControl(fetchImpl, "/config", {
+      body: JSON.stringify({ key: "deviceId", value: parsed.device.deviceId }),
+      method: "POST"
+    });
+    await callControl(fetchImpl, "/config", {
+      body: JSON.stringify({ key: "deviceToken", value: parsed.deviceToken }),
+      method: "POST"
+    });
+
+    output.stdout.write(`deviceId=${parsed.device.deviceId}\nclaimCode=${parsed.claimCode}\n`);
     return 0;
   }
 
