@@ -10,6 +10,7 @@ import {
   type CustomerReference,
   type Escalation,
   type OutboxEvent,
+  type Prisma,
   type PushToken,
   type RagChunk,
   type RagDocument,
@@ -20,11 +21,17 @@ import {
   type VoiceTest,
 } from "@prisma/client";
 
+export type RapidStepTestWrite = Omit<
+  RapidStepTest,
+  "id" | "createdAt" | "testData"
+> & { testData: Prisma.InputJsonValue };
+
 export interface UserRepository {
   findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
   findByPhone(phone: string): Promise<User | null>;
   findByUsername(username: string): Promise<User | null>;
+  findByBirthDate(birthDate: string): Promise<User[]>;
   create(user: Omit<User, "id" | "createdAt" | "updatedAt">): Promise<User>;
   update(id: string, user: Partial<User>): Promise<User>;
 }
@@ -72,7 +79,7 @@ export interface ClinicianAccessRequestRepository {
 export interface RapidStepTestRepository {
   findById(id: string): Promise<RapidStepTest | null>;
   findByUserId(userId: string): Promise<RapidStepTest[]>;
-  create(test: Omit<RapidStepTest, "id" | "createdAt">): Promise<RapidStepTest>;
+  create(test: RapidStepTestWrite): Promise<RapidStepTest>;
 }
 
 export interface EscalationRepository {

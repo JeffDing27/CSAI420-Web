@@ -49,6 +49,7 @@ model User {
   pushTokens     PushToken[]
   auditEvents    AuditEvent[]
   deviceAssignments DeviceAssignment[]
+  voiceSessions     VoiceSession[]
 }
 
 model AuthSession {
@@ -235,11 +236,23 @@ model PushToken {
 
 enum VoiceStage {
   INITIAL
+  AWAITING_NAME
+  AWAITING_NAME_CONFIRMATION
   AWAITING_PHONE
   AWAITING_DOB
   AUTHENTICATING
   AWAITING_TEST_CHOICE
   TEST_IN_PROGRESS
+  SAFETY_CHECK
+  DEVICE_CHECK
+  AWAITING_DOMINANT_FOOT
+  READY_FOR_SET_ONE
+  SET_ONE_IN_PROGRESS
+  RESTING
+  READY_FOR_SET_TWO
+  SET_TWO_IN_PROGRESS
+  SCORING
+  PAUSED
   COMPLETED
   FAILED
 }
@@ -248,9 +261,20 @@ model VoiceSession {
   id                     String     @id @default(uuid())
   callSid                String     @unique
   stage                  VoiceStage
+  userId                 String?
+  patientName            String?
+  patientEmail           String?
   phoneNumber            String?
   customerReferenceId    String?
   authenticationAttempts Int        @default(0)
+  dominantFoot           String?
+  deviceConnected        Boolean    @default(false)
+  setOneSteps            Int        @default(0)
+  setTwoSteps            Int        @default(0)
+  lastAnnouncedStep      Int        @default(0)
+  restStartedAt          DateTime?
+  pausedStage            String?
+  score                  Float?
   testStartedAt          DateTime?
   testCompletedAt        DateTime?
   callStatus             String?
@@ -259,6 +283,9 @@ model VoiceSession {
   updatedAt              DateTime   @updatedAt
 
   customerReference CustomerReference? @relation(fields: [customerReferenceId], references: [id], onDelete: SetNull)
+  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, updatedAt])
 }
 
 model VoiceTest {

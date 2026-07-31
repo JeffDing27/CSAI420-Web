@@ -21,6 +21,10 @@ export class PrismaUserRepository implements UserRepository {
     });
   }
 
+  async findByBirthDate(birthDate: string): Promise<User[]> {
+    return prisma.user.findMany({ where: { birthDate } });
+  }
+
   async create(
     user: Omit<User, "id" | "createdAt" | "updatedAt">,
   ): Promise<User> {

@@ -1,12 +1,11 @@
 import type { RapidStepTest } from "@prisma/client";
+import type { RapidStepTestWrite } from "@/repositories/interfaces";
 import { RepositoryFactory } from "@/repositories/provider-factory";
 
 export class RapidStepTestService {
   private repo = RepositoryFactory.getRapidStepTestRepository();
 
-  async submitTest(
-    data: Omit<RapidStepTest, "id" | "createdAt">,
-  ): Promise<RapidStepTest> {
+  async submitTest(data: RapidStepTestWrite): Promise<RapidStepTest> {
     if (!data.userId) {
       throw new Error("userId is required for rapid step test");
     }

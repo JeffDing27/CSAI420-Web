@@ -1,7 +1,10 @@
 import type { RapidStepTest } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { normalizeJson } from "@/utils/json-normalize";
-import type { RapidStepTestRepository } from "../interfaces";
+import type {
+  RapidStepTestRepository,
+  RapidStepTestWrite,
+} from "../interfaces";
 
 export class PrismaRapidStepTestRepository implements RapidStepTestRepository {
   async findById(id: string): Promise<RapidStepTest | null> {
@@ -15,9 +18,7 @@ export class PrismaRapidStepTestRepository implements RapidStepTestRepository {
     });
   }
 
-  async create(
-    test: Omit<RapidStepTest, "id" | "createdAt">,
-  ): Promise<RapidStepTest> {
+  async create(test: RapidStepTestWrite): Promise<RapidStepTest> {
     return prisma.rapidStepTest.create({
       data: {
         ...test,

@@ -1,5 +1,10 @@
-import type { VoiceTest } from "@prisma/client";
+import type { Prisma, VoiceTest } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+
+type VoiceTestWrite = Omit<
+  VoiceTest,
+  "id" | "createdAt" | "updatedAt" | "testData"
+> & { testData: Prisma.InputJsonValue };
 
 export class VoiceTestRepository {
   async findByCallSid(callSid: string): Promise<VoiceTest | null> {
@@ -8,9 +13,7 @@ export class VoiceTestRepository {
     });
   }
 
-  async upsert(
-    test: Omit<VoiceTest, "id" | "createdAt" | "updatedAt">,
-  ): Promise<VoiceTest> {
+  async upsert(test: VoiceTestWrite): Promise<VoiceTest> {
     return prisma.voiceTest.upsert({
       where: { callSid: test.callSid },
       update: {

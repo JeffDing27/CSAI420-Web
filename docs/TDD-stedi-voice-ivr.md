@@ -12,6 +12,12 @@
 | Created         | 2026-07-02                                                   |
 | Last Updated    | 2026-07-02                                                   |
 
+> **Implementation update — 2026-07-28:** The current MVP uses spoken name
+> confirmation plus keypad date-of-birth verification. SMS OTP is deferred.
+> The implemented state machine is served by `POST /api/voice-auth`, and sensor
+> connectivity/step events are received by `POST /api/voice/sensor`. This update
+> supersedes the OTP-specific call-flow sections below for the current MVP.
+
 ---
 
 ## 1. Context

@@ -1,69 +1,69 @@
 /**
- * test-ivr.ts
- *
- * Simulates Twilio requests to the local webhook endpoints to test the IVR state machine
- * without needing real Twilio credentials or ngrok.
+ * Simulates the complete Twilio IVR flow against a running local server.
+ * Start the app with USE_MOCK_TEST_DEVICE=true and IVR_REST_SECONDS=0.
  */
 
-const API_URL = "http://localhost:3000/api/voice-auth";
+const BASE_URL = "http://localhost:3000";
+const CALL_SID = "CA_simulate_1234567890";
 
-async function simulateTwilioRequest(
-  endpoint: string,
-  params: Record<string, string>,
-) {
-  console.log(`\n--- Calling ${endpoint} ---`);
-  console.log("Params:", params);
+async function callVoice(params: Record<string, string> = {}) {
+  const body = new URLSearchParams({
+    CallSid: CALL_SID,
+    From: "+15551234567",
+    To: "+15559876543",
+    ...params,
+  });
+  const response = await fetch(`${BASE_URL}/api/voice-auth`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const text = await response.text();
+  console.log(`Voice ${response.status}: ${text}`);
+  if (!response.ok) throw new Error(`Voice request failed: ${response.status}`);
+}
 
-  const urlParams = new URLSearchParams(params);
-
-  try {
-    const res = await fetch(`${API_URL}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: urlParams.toString(),
-    });
-
-    const text = await res.text();
-    console.log(`Status: ${res.status}`);
-    console.log("TwiML Response:");
-    console.log(text);
-  } catch (err) {
-    console.error("Error calling webhook:", err);
+async function sendSteps(steps: number) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (process.env.IVR_SENSOR_WEBHOOK_SECRET) {
+    headers["x-ivr-sensor-secret"] = process.env.IVR_SENSOR_WEBHOOK_SECRET;
   }
+
+  const response = await fetch(`${BASE_URL}/api/voice/sensor`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ callSid: CALL_SID, event: "step", steps }),
+  });
+  console.log(`Sensor ${response.status}: ${await response.text()}`);
+  if (!response.ok)
+    throw new Error(`Sensor request failed: ${response.status}`);
 }
 
 async function runTest() {
-  const callSid = "CA_simulate_1234567890";
+  await callVoice();
+  await callVoice({ SpeechResult: "Test User" });
+  await callVoice({ Digits: "1" });
+  await callVoice({ Digits: "01011990" });
+  await callVoice({ Digits: "1" });
+  await callVoice({ Digits: "1" });
+  await callVoice({ Digits: "2" });
+  await callVoice({ Digits: "1" });
 
-  // 1. Initial incoming call (INITIAL state)
-  await simulateTwilioRequest("", {
-    CallSid: callSid,
-    From: "+15551234567",
-    To: "+15559876543",
-  });
+  await sendSteps(30);
+  await callVoice();
+  await callVoice();
+  await callVoice({ Digits: "1" });
 
-  // 2. User inputs phone number (AWAITING_PHONE state)
-  await simulateTwilioRequest("", {
-    CallSid: callSid,
-    Digits: "1234567890",
-  });
+  await sendSteps(30);
+  await callVoice();
+  await callVoice();
 
-  // 3. User inputs DOB (AWAITING_DOB state)
-  // Mock accepts 01011990
-  await simulateTwilioRequest("", {
-    CallSid: callSid,
-    Digits: "01011990",
-  });
-
-  // 4. User presses 3 to record test (AWAITING_TEST_CHOICE state)
-  await simulateTwilioRequest("", {
-    CallSid: callSid,
-    Digits: "3",
-  });
-
-  console.log("\n--- IVR Simulation Complete ---");
+  console.log("IVR simulation complete.");
 }
 
-runTest();
+runTest().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
