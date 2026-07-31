@@ -1,4 +1,5 @@
 import PatientInformationCard from "@/components/PatientInformationCard";
+import FallRiskScoreCard from "@/components/FallRiskScoreCard";
 
 export default function DashboardPage() {
   return (
@@ -19,6 +20,12 @@ export default function DashboardPage() {
             email="john.smith@example.com"
             assessmentDate="July 21, 2026"
             status="Assessment Complete"
+          />
+
+          <FallRiskScoreCard
+            score={72}
+            riskLevel="Moderate"
+            recommendation="Schedule a follow-up balance assessment."
           />
         </div>
       </div>
