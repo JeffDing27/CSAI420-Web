@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -77,4 +72,20 @@ model Assignment {
   submitted   Boolean  @default(false)
   notes       String
   createdAt   DateTime @default(now())
+}
+
+model Escalation {
+  id                  String   @id
+  phoneNumber         String
+  originalQuestion    String
+  aiResponse          String
+  responsePreference  String
+  waitingForResponse  Boolean  @default(false)
+  sessionId           String?
+  userId              String?
+  status              String   @default("pending")
+  priority            String
+  category            String
+  escalationTimestamp DateTime @default(now())
+  createdAt           DateTime @default(now())
 }
