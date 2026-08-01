@@ -1,11 +1,34 @@
-import { PrismaPg } from "@prisma/adapter-pg";
+﻿import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
 
+function normalizeSupabaseConnectionString(value: string) {
+  if (!value || value === "undefined") {
+    return "postgresql://localhost:5432/stedi_test";
+  }
+  const url = new URL(value);
+  const directMatch = url.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/);
+
+  if (directMatch) {
+    const projectRef = directMatch[1];
+    url.hostname = "aws-1-us-west-2.pooler.supabase.com";
+    url.port = "6543";
+    url.username = `postgres.${projectRef}`;
+    url.searchParams.set("pgbouncer", "true");
+    url.searchParams.set("connection_limit", "1");
+  }
+
+  return url.toString();
+}
+
 const prismaClientSingleton = () => {
-  const connectionString = process.env.NODE_ENV === "test" 
-    ? `${process.env.DIRECT_URL}` 
-    : `${process.env.DATABASE_URL}`;
+  const configuredConnectionString =
+    process.env.NODE_ENV === "test"
+      ? `${process.env.DIRECT_URL}`
+      : `${process.env.DATABASE_URL}`;
+  const connectionString = normalizeSupabaseConnectionString(
+    configuredConnectionString,
+  );
 
   const pool = new Pool({
     connectionString,
@@ -16,7 +39,7 @@ const prismaClientSingleton = () => {
         : undefined,
   });
   const adapter = new PrismaPg(pool);
-  
+
   return new PrismaClient({ adapter });
 };
 
@@ -29,3 +52,4 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
