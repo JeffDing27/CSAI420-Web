@@ -68,7 +68,7 @@ export class AuthService {
       passwordSalt: salt,
       firstName: payload.firstName || "",
       lastName: payload.lastName || "",
-    });
+    } as any);
 
     // Create CustomerReference
     await CustomerReferenceRepository.upsert({

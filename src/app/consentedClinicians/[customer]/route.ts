@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ConsentedClinicianService } from "@/services/consented-clinician.service";
 
 const service = new ConsentedClinicianService();
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ customer: string }> },
 ) {
   const { customer } = await params;
@@ -19,7 +19,7 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ customer: string }> },
 ) {
   const { customer } = await params;

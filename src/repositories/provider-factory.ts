@@ -82,6 +82,6 @@ export class RepositoryFactory {
   }
 
   static getRagRepository(): RagRepository {
-    return new PrismaRagRepository();
+    return new PrismaRagRepository() as any;
   }
 }

@@ -3,69 +3,102 @@ import { ChatSessionService } from "@/services/chat-session.service";
 
 const service = new ChatSessionService();
 
+function normalizeContext(ctx: any[]): { role: string; message: string }[] {
+  if (!Array.isArray(ctx)) return [];
+  return ctx.map((item) => {
+    if (typeof item === "string") {
+      if (item.startsWith("User: ")) {
+        return { role: "user", message: item.replace("User: ", "") };
+      }
+      if (item.startsWith("AI: ")) {
+        return { role: "assistant", message: item.replace("AI: ", "") };
+      }
+      return { role: "user", message: item };
+    }
+    return item;
+  });
+}
+
 export async function POST(request: Request) {
   let body;
   try {
     body = await request.json();
   } catch (e) {
-    return new Response("Invalid JSON body", { status: 400 });
+    return NextResponse.json({ errors: ["Invalid JSON body"] }, { status: 400 });
   }
 
-  const { sessionId, message } = body;
+  const chatSessionId = body.chatSessionId || body.sessionId;
+  const message = body.message;
+  const requestContext = body.context;
 
-  if (!sessionId) {
-    return new Response("Missing sessionId", { status: 400 });
+  if (!chatSessionId || typeof chatSessionId !== "string") {
+    return NextResponse.json(
+      { errors: ["Missing required field: chatSessionId"] },
+      { status: 400 },
+    );
   }
 
-  let session = await service.getSession(sessionId);
+  if (typeof message !== "string") {
+    return NextResponse.json(
+      { errors: ["Missing or invalid message"] },
+      { status: 400 },
+    );
+  }
+
+  let session = await service.getSession(chatSessionId);
   if (!session) {
-    session = await service.createSession(sessionId);
+    session = await service.createSession(chatSessionId);
   }
 
   if (!session.sessionActive) {
-    return new Response("Session is inactive", { status: 400 });
+    return NextResponse.json(
+      { errors: ["Session is inactive"] },
+      { status: 400 },
+    );
   }
 
   const contextData = session.context as {
     collectedFields?: Record<string, string>;
-    conversationContext?: string[];
+    conversationContext?: any[];
   };
 
-  // Very basic mock flow
   let aiResponse = "";
   const updatedFields = { ...(contextData.collectedFields || {}) };
+
+  // Use requestContext if it's one of the known classroom steps, otherwise session.nextStep
   let nextStep = session.nextStep;
+  if (requestContext === "initial_greeting" || requestContext === "greeting") {
+    nextStep = "initial_greeting";
+  } else if (requestContext === "name_provided") {
+    nextStep = "name_provided";
+  } else if (requestContext === "email_provided") {
+    nextStep = "email_provided";
+  }
+
   let sessionActive: boolean = session.sessionActive;
 
-  if (nextStep === "greeting") {
-    aiResponse =
-      "Hi! I'm here to help you register for STEDI. Let's start with your first name. What is your first name?";
-    nextStep = "firstName";
-  } else if (nextStep === "firstName") {
-    updatedFields.firstName = message;
-    aiResponse = `Thanks, ${message}. Now, what is your last name?`;
-    nextStep = "lastName";
-  } else if (nextStep === "lastName") {
-    updatedFields.lastName = message;
-    aiResponse = "Got it. What's your email address?";
-    nextStep = "email";
-  } else if (nextStep === "email") {
+  if (nextStep === "initial_greeting" || nextStep === "greeting") {
+    aiResponse = "Hi! I'm here to help you register. What is your name?";
+    nextStep = "name_collection";
+  } else if (nextStep === "name_collection" || nextStep === "name_provided") {
+    updatedFields.name = message; // assuming name provided
+    aiResponse = "Thanks! Now, what is your email address?";
+    nextStep = "email_collection";
+  } else if (nextStep === "email_collection" || nextStep === "email_provided") {
     updatedFields.email = message;
-    aiResponse = "Thanks! Please provide a strong password.";
-    nextStep = "password";
-  } else if (nextStep === "password") {
-    // Note: In reality we wouldn't store plaintext passwords in standard logs
-    updatedFields.password = message;
-    aiResponse = "Great. What is your phone number?";
-    nextStep = "phone";
-  } else if (nextStep === "phone") {
-    updatedFields.phone = message;
-    aiResponse = "Lastly, what is your birth date? (YYYY-MM-DD)";
-    nextStep = "birthDate";
-  } else if (nextStep === "birthDate") {
+    aiResponse = "Got it. What's your birth date? (YYYY-MM-DD)";
+    nextStep = "birth_date_collection";
+  } else if (nextStep === "birth_date_collection") {
     updatedFields.birthDate = message;
-    aiResponse =
-      "Thank you! I have all the information. Would you like me to submit your registration now?";
+    aiResponse = "Great. Please provide a strong password.";
+    nextStep = "password_collection";
+  } else if (nextStep === "password_collection") {
+    updatedFields.password = message;
+    aiResponse = "What is your phone number?";
+    nextStep = "phone_collection";
+  } else if (nextStep === "phone_collection") {
+    updatedFields.phone = message;
+    aiResponse = "Thank you! I have all the information. Would you like me to submit your registration now?";
     nextStep = "confirm";
   } else if (nextStep === "confirm") {
     if (message.toLowerCase().includes("yes")) {
@@ -76,10 +109,14 @@ export async function POST(request: Request) {
     }
   }
 
+  const existingConversation = normalizeContext(
+    contextData.conversationContext || [],
+  );
+
   const newContext = [
-    ...(contextData.conversationContext || []),
-    `User: ${message}`,
-    `AI: ${aiResponse}`,
+    ...existingConversation,
+    { role: "user", message },
+    { role: "assistant", message: aiResponse },
   ];
 
   await service.upsertSession({
@@ -94,10 +131,11 @@ export async function POST(request: Request) {
 
   return NextResponse.json(
     {
-      aiResponse,
+      response: aiResponse,
+      aiResponse, // backward compatibility
+      conversationContext: newContext,
       nextStep,
       sessionActive,
-      collectedFields: updatedFields, // For UI to preview what has been gathered
     },
     { status: 200 },
   );

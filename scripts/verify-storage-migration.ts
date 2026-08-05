@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../src/lib/prisma";
 
 async function verify() {
   console.log("Verifying storage migration to Supabase...");
@@ -6,7 +6,7 @@ async function verify() {
     console.error("ERROR: STORAGE_PROVIDER is not set to supabase.");
     process.exit(1);
   }
-  const prisma = new PrismaClient();
+
   try {
     await prisma.$queryRaw`SELECT 1`;
     console.log("Storage Migration Verification: SUCCESS - Connected to Supabase");

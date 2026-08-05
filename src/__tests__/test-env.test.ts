@@ -1,8 +1,7 @@
 import { expect, test } from "vitest";
 
 test("env vars", () => {
-  console.log("DATABASE_URL:", process.env.DATABASE_URL);
-  console.log("DIRECT_URL:", process.env.DIRECT_URL);
+  expect(Boolean(process.env.DATABASE_URL)).toBe(true);
+  expect(Boolean(process.env.DIRECT_URL)).toBe(true);
   console.log("NODE_ENV:", process.env.NODE_ENV);
-  expect(true).toBe(true);
 });

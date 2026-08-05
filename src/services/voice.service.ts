@@ -233,6 +233,7 @@ export class VoiceService {
         testData,
         source: TestSource.IVR,
         completedAt,
+        deviceRecordId: null,
       });
       score = await this.riskScoreService.calculateRiskScore(
         session.patientEmail,

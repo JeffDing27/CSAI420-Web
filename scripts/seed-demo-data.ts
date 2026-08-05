@@ -1,9 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../src/lib/prisma";
 import { AuthService } from "../src/lib/service/auth.service";
 import crypto from "crypto";
 import { RepositoryFactory } from "../src/repositories/provider-factory";
 
-const prisma = new PrismaClient();
+
 
 async function seed() {
   console.log("Seeding demo data...");
@@ -58,7 +58,7 @@ async function seed() {
   for (const u of users) {
     const existing = await prisma.user.findUnique({ where: { email: u.email } });
     if (!existing) {
-      await AuthService.register({
+      await AuthService.signup({
         userName: u.userName,
         email: u.email,
         firstName: u.firstName,
@@ -68,7 +68,7 @@ async function seed() {
         region: u.region,
         password: demoPassword,
       });
-      // Update role (register defaults to PATIENT)
+      // Update role (signup defaults to PATIENT)
       await prisma.user.update({
         where: { email: u.email },
         data: { role: u.role as any }

@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { RiskScoreService } from "@/services/risk-score.service";
 
 const service = new RiskScoreService();
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ email: string }> },
 ) {
   const { email } = await params;
