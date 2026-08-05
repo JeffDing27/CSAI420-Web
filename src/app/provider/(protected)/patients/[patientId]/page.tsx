@@ -109,7 +109,11 @@ export default async function PatientProfilePage({
                 </div>
                 <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
                   <p>
-                    Completed on <time dateTime={test.completedAt.toISOString()}>{new Date(test.completedAt).toLocaleDateString()}</time>
+                    {test.completedAt ? (
+                      <>Completed on <time dateTime={test.completedAt.toISOString()}>{test.completedAt.toLocaleDateString()}</time></>
+                    ) : (
+                      "Not completed"
+                    )}
                   </p>
                 </div>
               </div>

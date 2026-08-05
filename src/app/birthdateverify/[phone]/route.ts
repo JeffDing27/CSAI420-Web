@@ -10,7 +10,7 @@ export async function OPTIONS() {
   return new Response(null, { headers: getCorsHeaders() });
 }
 
-export async function POST(request: Request, { params }: { params: { phone: string } }) {
+export async function POST() {
   if (process.env.USE_LOCAL_USER_STORE === "true") {
     // Simulated behavior for prototype compatibility
     return new Response("OK", { status: 200, headers: { ...getCorsHeaders(), "content-type": "text/plain" } });

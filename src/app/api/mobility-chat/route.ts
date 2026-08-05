@@ -136,7 +136,19 @@ export async function POST(request: Request) {
         });
 
         const lastMsg = aiResult.messages[aiResult.messages.length - 1];
-        assistantResponse = lastMsg.content;
+        assistantResponse =
+          typeof lastMsg.content === "string"
+            ? lastMsg.content
+            : lastMsg.content
+                .map((content) => {
+                  if (typeof content === "string") return content;
+                  if ("text" in content && typeof content.text === "string") {
+                    return content.text;
+                  }
+                  return "";
+                })
+                .filter(Boolean)
+                .join("\n");
       } catch (err) {
         console.error("AI invocation failed", err);
         return NextResponse.json(
