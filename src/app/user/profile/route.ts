@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { AuthService } from "@/lib/service/auth.service";
-import { UserRepository } from "@/lib/repository/user.repository";
+import { StediAuthService } from "@/lib/service/stedi-auth.service";
 
 const getCorsHeaders = () => ({
   "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, suresteps.session.token",
+    "Content-Type, Authorization, suresteps.session.token, x-stedi-device-id, x-stedi-device-token",
 });
 
 export async function OPTIONS() {
@@ -16,57 +15,55 @@ export async function OPTIONS() {
   });
 }
 
-import { getAuthToken } from "@/utils/auth";
-
 export async function GET(request: Request) {
   try {
-    const token = getAuthToken(request);
+    const { profile, error, status } = await StediAuthService.resolveAuthenticatedProfile(request);
 
-    if (!token) {
+    if (error || !profile) {
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: error || "Unauthorized" },
         {
-          status: 401,
+          status: status || 401,
           headers: getCorsHeaders(),
         },
       );
     }
 
-    const session = await AuthService.validateSession(token);
+    // Try fetching the legacy user info from STEDI
+    let legacyData = {};
+    const possibleHeaders = ["suresteps.session.token", "x-suresteps-session-token", "suresteps-session-token", "authorization"];
+    let token: string | null = null;
+    request.headers.forEach((val, key) => {
+      const lowerKey = key.toLowerCase();
+      if (possibleHeaders.includes(lowerKey)) {
+        if (lowerKey === "authorization" && val.startsWith("Bearer ")) {
+          if (!token) token = val.substring(7);
+        } else {
+          if (!token) token = val;
+        }
+      }
+    });
 
-    if (!session) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        {
-          status: 401,
-          headers: getCorsHeaders(),
-        },
-      );
-    }
-
-    const user = await UserRepository.findById(session.userId);
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        {
-          status: 404,
-          headers: getCorsHeaders(),
-        },
-      );
+    if (token) {
+      const legacyUser = await StediAuthService.getLegacyUser(profile.externalEmail, token);
+      if (legacyUser) {
+        legacyData = {
+          userName: legacyUser.userName || legacyUser.email,
+          firstName: legacyUser.firstName,
+          lastName: legacyUser.lastName,
+          email: legacyUser.email,
+          phone: legacyUser.phone,
+          birthDate: legacyUser.birthDate,
+          region: legacyUser.region,
+        };
+      }
     }
 
     return NextResponse.json(
       {
-        id: user.id,
-        userName: user.userName,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        birthDate: user.birthDate,
-        region: user.region,
-        role: user.role,
+        id: profile.id, // we expose the local profile ID
+        role: profile.role,
+        ...legacyData,
       },
       {
         status: 200,
@@ -75,7 +72,6 @@ export async function GET(request: Request) {
     );
   } catch (error) {
     console.error("Failed to load user profile:", error);
-
     return NextResponse.json(
       { error: "Internal Server Error" },
       {

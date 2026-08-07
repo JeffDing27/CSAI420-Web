@@ -1,19 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getAuthToken } from '../../../utils/auth';
-import { AuthService } from '../../../lib/service/auth.service';
+import { StediAuthService } from '../../../lib/service/stedi-auth.service';
 import { DeviceService } from '../../../services/device.service';
 import { DeviceAssignmentMethod } from '@prisma/client';
 
 export async function POST(request: Request) {
   try {
-    const token = getAuthToken(request);
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authResult = await StediAuthService.resolveAuthenticatedProfile(request);
 
-    const session = await AuthService.validateSession(token);
-    if (!session || !session.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (authResult.error || !authResult.profile) {
+      return NextResponse.json({ error: authResult.error || 'Unauthorized' }, { status: authResult.status || 401 });
     }
 
     let body;
@@ -30,7 +25,7 @@ export async function POST(request: Request) {
 
     try {
       const result = await DeviceService.claimDevice({
-        userId: session.userId,
+        profileId: authResult.profile.id,
         claimCode,
         method: DeviceAssignmentMethod.MOBILE
       });

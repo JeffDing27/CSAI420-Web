@@ -1,21 +1,16 @@
 import { NextResponse } from 'next/server';
-import { getAuthToken } from '../../../utils/auth';
-import { AuthService } from '../../../lib/service/auth.service';
+import { StediAuthService } from '../../../lib/service/stedi-auth.service';
 import { DeviceService } from '../../../services/device.service';
 
 export async function GET(request: Request) {
   try {
-    const token = getAuthToken(request);
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await StediAuthService.resolveAuthenticatedProfile(request);
+
+    if (authResult.error || !authResult.profile) {
+      return NextResponse.json({ error: authResult.error || 'Unauthorized' }, { status: authResult.status || 401 });
     }
 
-    const session = await AuthService.validateSession(token);
-    if (!session || !session.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const activeAssignments = await DeviceService.getActiveAssignmentsForUser(session.userId);
+    const activeAssignments = await DeviceService.getActiveAssignmentsForProfile(authResult.profile.id);
 
     const devices = activeAssignments.map((assignment) => ({
       deviceId: assignment.device.deviceId,

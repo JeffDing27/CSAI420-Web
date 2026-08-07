@@ -18,6 +18,13 @@ export class PrismaRapidStepTestRepository implements RapidStepTestRepository {
     });
   }
 
+  async findByProfileId(profileId: string): Promise<RapidStepTest[]> {
+    return prisma.rapidStepTest.findMany({
+      where: { profileId },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   async create(test: RapidStepTestWrite): Promise<RapidStepTest> {
     return prisma.rapidStepTest.create({
       data: {

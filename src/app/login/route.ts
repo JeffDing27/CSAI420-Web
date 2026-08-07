@@ -1,14 +1,11 @@
-import crypto from "crypto";
 import { NextResponse } from "next/server";
-import { AuthService } from "@/lib/service/auth.service";
-import { kvGet } from "@/utils/kv-store";
-import { forwardRequest } from "@/utils/pass-through";
+import { StediAuthService } from "@/lib/service/stedi-auth.service";
 
 const getCorsHeaders = () => {
   return {
     "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, suresteps.session.token, x-stedi-device-id, x-stedi-device-token",
   };
 };
 
@@ -30,51 +27,51 @@ export async function POST(request: Request) {
     );
   }
 
-  // 1. Local Fallback Mode
-  if (process.env.USE_LOCAL_USER_STORE === "true") {
-    const userName = payload.userName || payload.email;
-    const password = payload.password;
+  const userName = payload.userName || payload.email;
+  const password = payload.password;
 
-    if (!userName || !password) {
-      return new Response("Missing userName or password", {
-        status: 400,
-        headers: getCorsHeaders(),
-      });
-    }
-
-    const { token, error } = await AuthService.login(userName, password);
-
-    if (error) {
-      return new Response(error, { status: 401, headers: getCorsHeaders() });
-    }
-
-    // Return the existing successful login response shape expected by the mobile app (text token)
-    return new Response(token!, {
-      status: 200,
-      headers: { ...getCorsHeaders(), "content-type": "text/plain" },
+  if (!userName || !password) {
+    return new Response("Missing userName or password", {
+      status: 400,
+      headers: getCorsHeaders(),
     });
   }
 
-  // 2. STEDI Forwarding
-  const clonedReq = new Request(request.url, {
-    method: request.method,
-    headers: request.headers,
-    body: bodyStr,
-  });
+  // 1. Forward credentials to STEDI
+  const authResult = await StediAuthService.login(userName, password);
 
-  const stediResponse = await forwardRequest(clonedReq, "/login");
+  if (authResult.error || !authResult.token) {
+    return new Response(authResult.error || "Login failed", {
+      status: authResult.status || 401,
+      headers: getCorsHeaders(),
+    });
+  }
 
-  // Add CORS headers to the response we're proxying
-  const finalHeaders = new Headers(stediResponse.headers);
-  const cors = getCorsHeaders();
-  Object.keys(cors).forEach((key) => {
-    finalHeaders.set(key, cors[key as keyof typeof cors]);
-  });
+  // 2. Validate Token via GET /validate/{token}
+  const validateResult = await StediAuthService.validateToken(authResult.token);
 
-  // For 200 OK or other responses from STEDI
-  return new Response(stediResponse.body, {
-    status: stediResponse.status,
-    statusText: stediResponse.statusText,
-    headers: finalHeaders,
+  if (validateResult.error || !validateResult.email) {
+    return new Response(validateResult.error || "Invalid session created", {
+      status: validateResult.status || 401,
+      headers: getCorsHeaders(),
+    });
+  }
+
+  // 3. Upsert Profile using the trusted returned email
+  try {
+    await StediAuthService.upsertProfile(validateResult.email);
+  } catch (error) {
+    console.error("Failed to upsert profile after login:", error);
+    // Even if local DB fails, STEDI auth was successful, but we should fail safely
+    return new Response("Internal Server Error", {
+      status: 500,
+      headers: getCorsHeaders(),
+    });
+  }
+
+  // Return the token exactly as expected (text token)
+  return new Response(authResult.token, {
+    status: 200,
+    headers: { ...getCorsHeaders(), "content-type": "text/plain" },
   });
 }

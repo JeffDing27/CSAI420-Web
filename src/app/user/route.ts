@@ -1,14 +1,11 @@
-import crypto from "crypto";
 import { NextResponse } from "next/server";
-import { AuthService } from "@/lib/service/auth.service";
-import { kvGet, kvSet } from "@/utils/kv-store";
 import { forwardRequest } from "@/utils/pass-through";
 
 const getCorsHeaders = () => {
   return {
     "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, suresteps.session.token, x-stedi-device-id, x-stedi-device-token",
   };
 };
 
@@ -72,26 +69,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
-
-  // 2. Local Fallback Mode
-  if (process.env.USE_LOCAL_USER_STORE === "true") {
-    const { user, error } = await AuthService.signup(payload);
-
-    if (error) {
-      return NextResponse.json(
-        { error },
-        { status: 409, headers: getCorsHeaders() },
-      );
-    }
-
-    return NextResponse.json(
-      { message: "User created successfully", email: normalizedEmail },
-      { status: 200, headers: getCorsHeaders() },
-    );
-  }
-
-  // 3. STEDI Forwarding
+  // 2. STEDI Forwarding
   const clonedReq = new Request(request.url, {
     method: request.method,
     headers: request.headers,
@@ -107,12 +85,7 @@ export async function POST(request: Request) {
     finalHeaders.set(key, cors[key as keyof typeof cors]);
   });
 
-  // Handle upstream STEDI errors
   if (stediResponse.status === 500) {
-    // We don't know exactly if it's 409 or 502, but STEDI returns 500 for most failures.
-    // The instructions say: "502 when the external STEDI service fails instead of a generic internal 500."
-    // However, if we parse it and it says "already exists" we could do 409, but let's default to 502.
-    // We already check in pass-through for "Error creating customer" giving 409, maybe we do the same?
     const responseText = await stediResponse.text();
     if (
       responseText.toLowerCase().includes("exists") ||
@@ -137,8 +110,6 @@ export async function POST(request: Request) {
     });
   }
 
-  // For 200 OK or other responses from STEDI
-  // To attach headers to an existing Response, we recreate it:
   return new Response(stediResponse.body, {
     status: stediResponse.status,
     statusText: stediResponse.statusText,

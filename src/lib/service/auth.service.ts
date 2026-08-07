@@ -58,6 +58,7 @@ export class AuthService {
       email: user.email,
       userId: user.id,
       externalCustomerId: null,
+      profileId: null,
     });
 
     return { user };

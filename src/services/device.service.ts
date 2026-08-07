@@ -81,10 +81,21 @@ export class DeviceService {
     };
   }
 
-  static async claimDevice({ userId, claimCode, method }: { userId: string, claimCode: string, method: DeviceAssignmentMethod }) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      throw new Error('User not found');
+  static async claimDevice({ userId, profileId, claimCode, method }: { userId?: string, profileId?: string, claimCode: string, method: DeviceAssignmentMethod }) {
+    if (!userId && !profileId) {
+      throw new Error('User or Profile ID required');
+    }
+
+    if (profileId) {
+      const profile = await prisma.profile.findUnique({ where: { id: profileId } });
+      if (!profile) {
+        throw new Error('Profile not found');
+      }
+    } else if (userId) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new Error('User not found');
+      }
     }
     
     const claimCodeHash = hashClaimCode(claimCode);
@@ -110,7 +121,7 @@ export class DeviceService {
         });
         
         if (activeAssignment) {
-          if (activeAssignment.userId === userId) {
+          if ((profileId && activeAssignment.profileId === profileId) || (userId && activeAssignment.userId === userId)) {
             return { device, assignment: activeAssignment, isNew: false };
           } else {
             throw new Error('Device is already assigned to another patient');
@@ -121,6 +132,7 @@ export class DeviceService {
           data: {
             deviceRecordId: device.id,
             userId,
+            profileId,
             method
           }
         });
@@ -134,14 +146,14 @@ export class DeviceService {
       });
     } catch (error: any) {
       // If concurrent request won the race, Prisma throws P2002 on the partial unique index
-      if (isP2002Conflict(error, 'deviceRecordId') || isP2002Conflict(error, 'DeviceAssignment_deviceRecordId_key') || isP2002Conflict(error, 'deviceAssignment')) {
+      if (isP2002Conflict(error, 'deviceRecordId') || isP2002Conflict(error, 'DeviceAssignment_deviceRecordId_key') || isP2002Conflict(error, 'deviceAssignment') || isP2002Conflict(error, 'DeviceAssignment_active_device_assignment')) {
         const activeAssignment = await prisma.deviceAssignment.findFirst({
           where: {
             deviceRecordId: device.id,
             unassignedAt: null
           }
         });
-        if (activeAssignment && activeAssignment.userId === userId) {
+        if (activeAssignment && ((profileId && activeAssignment.profileId === profileId) || (userId && activeAssignment.userId === userId))) {
           return { device, assignment: activeAssignment, isNew: false };
         } else {
           throw new Error('Device is already assigned to another patient');
@@ -151,7 +163,7 @@ export class DeviceService {
     }
   }
 
-  static async unassignDevice({ deviceId, userId }: { deviceId: string, userId?: string }) {
+  static async unassignDevice({ deviceId, userId, profileId }: { deviceId: string, userId?: string, profileId?: string }) {
     const normalizedDeviceId = normalizeDeviceId(deviceId);
     
     return await prisma.$transaction(async (tx) => {
@@ -176,6 +188,10 @@ export class DeviceService {
       
       if (userId && activeAssignment.userId !== userId) {
         throw new Error('Device is not assigned to this user');
+      }
+
+      if (profileId && activeAssignment.profileId !== profileId) {
+        throw new Error('Device is not assigned to this profile');
       }
       
       const updatedAssignment = await tx.deviceAssignment.update({
@@ -220,7 +236,8 @@ export class DeviceService {
         unassignedAt: null
       },
       include: {
-        user: true
+        user: true,
+        profile: true
       }
     });
   }
@@ -229,6 +246,24 @@ export class DeviceService {
     return await prisma.deviceAssignment.findMany({
       where: {
         userId,
+        unassignedAt: null
+      },
+      include: {
+        device: {
+          select: {
+            deviceId: true,
+            status: true,
+            lastSeenAt: true,
+          }
+        }
+      }
+    });
+  }
+
+  static async getActiveAssignmentsForProfile(profileId: string) {
+    return await prisma.deviceAssignment.findMany({
+      where: {
+        profileId,
         unassignedAt: null
       },
       include: {
