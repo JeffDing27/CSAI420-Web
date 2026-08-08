@@ -17,4 +17,14 @@ export class ConsentedClinicianService {
   ): Promise<void> {
     await this.repo.add(customer, clinicianUsername);
   }
+
+  async getPatientsForClinician(
+    clinicianUsername: string,
+  ): Promise<{ customer: string }[]> {
+    const patients = await this.repo.findByClinicianUsername(clinicianUsername);
+
+    return patients.map((p) => ({
+      customer: p.customer,
+    }));
+  }
 }

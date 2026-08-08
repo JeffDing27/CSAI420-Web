@@ -64,6 +64,9 @@ export interface ConsentRepository {
 
 export interface ConsentedClinicianRepository {
   findByCustomer(customer: string): Promise<ConsentedClinician[]>;
+  findByClinicianUsername(
+    clinicianUsername: string,
+  ): Promise<ConsentedClinician[]>;
   add(customer: string, clinicianUsername: string): Promise<ConsentedClinician>;
 }
 
