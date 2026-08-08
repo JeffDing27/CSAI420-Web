@@ -26,13 +26,27 @@ export type RapidStepTestWrite = Omit<
   "id" | "createdAt" | "testData"
 > & { testData: Prisma.InputJsonValue };
 
+export type UserWrite = Omit<
+  User,
+  "id" | "createdAt" | "updatedAt" | "externalUserId" | "role"
+> &
+  Partial<Pick<User, "externalUserId" | "role">>;
+
+export type RagDocumentWrite = Omit<
+  RagDocument,
+  "id" | "createdAt" | "updatedAt"
+> &
+  Partial<Pick<RagDocument, "updatedAt">>;
+
+export type RagChunkWrite = Omit<RagChunk, "id" | "createdAt">;
+
 export interface UserRepository {
   findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
   findByPhone(phone: string): Promise<User | null>;
   findByUsername(username: string): Promise<User | null>;
   findByBirthDate(birthDate: string): Promise<User[]>;
-  create(user: Omit<User, "id" | "createdAt" | "updatedAt">): Promise<User>;
+  create(user: UserWrite): Promise<User>;
   update(id: string, user: Partial<User>): Promise<User>;
 }
 
@@ -141,9 +155,10 @@ export interface SmsRepository {
 }
 
 export interface RagRepository {
-  findDocuments(): Promise<RagDocument[]>;
-  findChunks(embedding: any, limit: number): Promise<RagChunk[]>;
-  // For mocks, we just provide an interface. Proper implementation will use pgvector.
+  findDocumentById(id: string): Promise<RagDocument | null>;
+  createDocument(document: RagDocumentWrite): Promise<RagDocument>;
+  addChunks(chunks: RagChunkWrite[]): Promise<void>;
+  similaritySearch(queryEmbedding: unknown, limit?: number): Promise<RagChunk[]>;
 }
 
 export interface OutboxRepository {

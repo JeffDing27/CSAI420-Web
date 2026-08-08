@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { RepositoryFactory } from "@/repositories/provider-factory";
 
 export async function POST(request: Request) {
@@ -20,6 +21,10 @@ export async function POST(request: Request) {
       source,
       section: section || null,
       metadata: metadata || {},
+      checksum: crypto
+        .createHash("sha256")
+        .update(JSON.stringify(chunks))
+        .digest("hex"),
       updatedAt: new Date(),
     });
 
