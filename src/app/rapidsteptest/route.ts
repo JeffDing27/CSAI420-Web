@@ -1,68 +1,44 @@
-import { forwardRequest } from "@/utils/pass-through";
-import { authenticateDeviceRequest } from "@/utils/device-request-auth";
-import { DeviceService } from "@/services/device.service";
-import { RapidStepTestService } from "@/services/rapid-step-test.service";
-import { TestSource } from "@prisma/client";
+import { getAuthToken } from "@/utils/auth";
+
+const STEDI_BASE_URL = process.env.STEDI_API_BASE_URL || "https://dev.stedi.me";
 
 export async function POST(request: Request) {
-  const deviceIdHeader = request.headers.get('x-stedi-device-id');
-  const deviceTokenHeader = request.headers.get('x-stedi-device-token');
-
-  if (!deviceIdHeader && !deviceTokenHeader) {
-    // Mode A: legacy request
-    return forwardRequest(request, "/rapidsteptest");
-  }
-
-  // Mode B: authenticated device request
-  const authResult = await authenticateDeviceRequest(request);
-
-  if (authResult.type === 'error') {
-    return new Response(authResult.message, { status: authResult.status });
-  }
-  
-  if (authResult.type === 'none') {
-    return new Response('Incomplete device credentials', { status: 401 });
-  }
-
-  const { device } = authResult;
-
-  let data: any;
   try {
-    data = await request.json();
-  } catch {
-    return new Response("Invalid JSON", { status: 400 });
-  }
-
-  if (data.deviceId !== undefined && data.deviceId !== device.deviceId) {
-    return new Response("Device ID mismatch", { status: 400 });
-  }
-
-  try {
-    const activeAssignment = await DeviceService.getActiveAssignment(device.id);
-    if (!activeAssignment) {
-      return new Response("Device has no active patient assignment", { status: 409 });
+    const body = await request.text();
+    if (!body) {
+      return new Response("Missing request body", { status: 400 });
     }
 
-    const externalTestId = data.testId || data.id || undefined;
-    const completedAt = new Date(); // server time
-
-    const service = new RapidStepTestService();
-    await service.submitTest({
-      userId: activeAssignment.userId,
-      deviceRecordId: device.id,
-      source: TestSource.DEVICE,
-      externalTestId,
-      testData: data,
-      completedAt,
+    const token = getAuthToken(request);
+    const upstreamHeaders = new Headers({
+      accept: "application/json, text/plain;q=0.9, */*;q=0.8",
+      "content-type": "application/json",
     });
 
-    return new Response("Saved", {
-      status: 200,
-      headers: { "content-type": "text/plain" },
+    if (token) {
+      upstreamHeaders.set("suresteps.session.token", token);
+    }
+
+    const upstreamResponse = await fetch(`${STEDI_BASE_URL}/rapidsteptest`, {
+      method: "POST",
+      headers: upstreamHeaders,
+      body,
+      cache: "no-store",
     });
-  } catch (error: any) {
-    // Handle specific RapidStepTestService idempotency error if necessary
-    // or unexpected errors
+
+    const responseHeaders = new Headers();
+    const contentType = upstreamResponse.headers.get("content-type");
+    if (contentType) {
+      responseHeaders.set("content-type", contentType);
+    }
+
+    return new Response(upstreamResponse.body, {
+      status: upstreamResponse.status,
+      statusText: upstreamResponse.statusText,
+      headers: responseHeaders,
+    });
+  } catch (error) {
+    console.error("Failed to bridge rapidsteptest request:", error);
     return new Response("Internal Server Error", { status: 500 });
   }
 }

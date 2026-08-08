@@ -3,6 +3,17 @@ import { NextResponse } from "next/server";
 export async function forwardRequest(request: Request, path: string) {
   const baseUrl = process.env.STEDI_API_BASE_URL || "https://dev.stedi.me";
   const url = `${baseUrl}${path}`;
+  const allowVerboseTokenLogging = process.env.LOG_SENSITIVE_TOKENS === "true";
+
+  const formatTokenForLog = (tokenValue: string) => {
+    if (allowVerboseTokenLogging) {
+      return tokenValue;
+    }
+    if (tokenValue.length <= 8) {
+      return "***";
+    }
+    return `${tokenValue.slice(0, 4)}...${tokenValue.slice(-4)}`;
+  };
 
   const incomingHeaderNames = Array.from(request.headers.keys());
   console.log(
@@ -96,12 +107,13 @@ export async function forwardRequest(request: Request, path: string) {
       error,
     );
 
-    // Test fallbacks if fetch completely fails
-    if (path === "/login" && request.method === "POST")
-      return new Response("mocked-token-123", {
-        status: 200,
+    // Do not fake login tokens: fail loudly on upstream login connectivity issues.
+    if (path === "/login" && request.method === "POST") {
+      return new Response("Upstream login request failed", {
+        status: 502,
         headers: { "content-type": "text/plain" },
       });
+    }
     if (path === "/rapidsteptest" && request.method === "POST")
       return new Response("Saved", {
         status: 200,
@@ -155,12 +167,19 @@ export async function forwardRequest(request: Request, path: string) {
     }
     console.error(`[Pass-Through] Response Body:`, rawText);
 
-    // Test fallbacks if STEDI returns an error (e.g. 502)
-    if (path === "/login" && request.method === "POST")
-      return new Response("mocked-token-123", {
-        status: 200,
+    if (path === "/login" && request.method === "POST") {
+      console.error(
+        `[Pass-Through] Login failed | Upstream status: ${upstreamRes.status} | Body: ${rawText}`,
+      );
+    }
+
+    // Do not fake login tokens: return real upstream login failures.
+    if (path === "/login" && request.method === "POST") {
+      return new Response(rawText || "Upstream login failed", {
+        status: upstreamRes.status,
         headers: { "content-type": "text/plain" },
       });
+    }
     if (path === "/rapidsteptest" && request.method === "POST")
       return new Response("Saved", {
         status: 200,
@@ -198,6 +217,9 @@ export async function forwardRequest(request: Request, path: string) {
   if (upstreamRes.ok) {
     if (path === "/login" && request.method === "POST") {
       // Ensure we return text for login instead of JSON, in case STEDI started returning JSON
+      console.log(
+        `[Pass-Through] Login succeeded | token: ${formatTokenForLog(rawText.trim())}`,
+      );
       responseHeaders.set("content-type", "text/plain");
       return new Response(rawText, { status: 200, headers: responseHeaders });
     }
