@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { AuthService } from "@/lib/service/auth.service";
 import { UserRepository } from "@/lib/repository/user.repository";
+import { StediAuthService } from "@/lib/service/stedi-auth.service";
 
 const STEDI_BASE_URL = process.env.STEDI_API_BASE_URL || "https://dev.stedi.me";
 
@@ -54,6 +55,18 @@ export async function loginPatient(userNameOrEmail: string, password: string) {
       return { error: "STEDI login did not return a valid token." };
     }
 
+    const { email: validatedEmail, error: validationError } = await StediAuthService.validateToken(token);
+    if (validationError || !validatedEmail) {
+      return { error: validationError || "Failed to validate STEDI token." };
+    }
+
+    try {
+      await StediAuthService.upsertProfile(validatedEmail);
+    } catch (error) {
+      console.error("[Patient Login] Profile upsert failed:", error);
+      return { error: "An internal server error occurred during login." };
+    }
+
     cookieStore.set("suresteps.session.token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -61,7 +74,7 @@ export async function loginPatient(userNameOrEmail: string, password: string) {
       path: "/",
     });
 
-    cookieStore.set("patient.portal.identity", normalizedInput.toLowerCase(), {
+    cookieStore.set("patient.portal.identity", validatedEmail.toLowerCase(), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",

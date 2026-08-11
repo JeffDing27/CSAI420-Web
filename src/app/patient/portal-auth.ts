@@ -2,9 +2,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AuthService } from "@/lib/service/auth.service";
 import { UserRepository } from "@/lib/repository/user.repository";
+import { StediAuthService } from "@/lib/service/stedi-auth.service";
 
 export type PatientPortalUser = {
   id?: string;
+  profileId?: string;
   userName: string;
   firstName: string;
   lastName: string;
@@ -63,46 +65,31 @@ export async function getPatientPortalUser() {
     redirect("/patient/login");
   }
 
-  let localUser = await UserRepository.findByEmail(identity);
-  if (!localUser) {
-    localUser = await UserRepository.findByUserName(identity);
-  }
-
-  if (localUser && localUser.role !== "PATIENT") {
+  const { email, error: validationError } = await StediAuthService.validateToken(token);
+  if (validationError || !email) {
     redirect("/patient/login");
   }
 
-  if (localUser) {
-    return {
-      token,
-      stediMode: true,
-      user: {
-        id: localUser.id,
-        userName: localUser.userName,
-        firstName: localUser.firstName,
-        lastName: localUser.lastName,
-        email: localUser.email,
-        phone: localUser.phone,
-        birthDate: localUser.birthDate,
-        region: localUser.region,
-        role: "PATIENT",
-      },
-    } as PatientPortalContext;
+  const profile = await StediAuthService.upsertProfile(email);
+  if (profile.role !== "PATIENT") {
+    redirect("/patient/login");
   }
 
-  const fallbackName = identity.includes("@") ? identity.split("@")[0] : identity;
+  const legacyUser = await StediAuthService.getLegacyUser(email, token);
+  const fallbackName = email.split("@")[0];
 
   return {
     token,
     stediMode: true,
     user: {
-      userName: fallbackName,
-      firstName: fallbackName,
-      lastName: "",
-      email: identity.includes("@") ? identity : `${identity}@unknown.local`,
-      phone: "",
-      birthDate: "",
-      region: "",
+      profileId: profile.id,
+      userName: legacyUser?.userName || fallbackName,
+      firstName: legacyUser?.firstName || fallbackName,
+      lastName: legacyUser?.lastName || "",
+      email: email,
+      phone: legacyUser?.phone || "",
+      birthDate: legacyUser?.birthDate || "",
+      region: legacyUser?.region || "",
       role: "PATIENT",
     },
   } as PatientPortalContext;

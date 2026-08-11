@@ -8,7 +8,7 @@ export default async function PatientProfilePortalPage() {
       <div className="border-b border-slate-200 px-6 py-5">
         <h1 className="text-2xl font-semibold text-slate-900">Profile</h1>
         <p className="mt-1 text-sm text-slate-500">Your account and contact details.</p>
-        {stediMode && !user.id ? (
+        {stediMode && !user.id && !user.profileId ? (
           <p className="mt-2 text-xs text-amber-600">
             This account is authenticated through STEDI and does not have a mapped local patient profile yet.
           </p>
