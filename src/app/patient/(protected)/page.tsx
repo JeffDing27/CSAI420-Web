@@ -21,16 +21,25 @@ function calculateAge(birthDate: string) {
 export default async function PatientPortalHomePage() {
   const { user, stediMode } = await getPatientPortalUser();
   const hasLocalUser = Boolean(user.id);
-  const [tests, assignments] = hasLocalUser
-    ? await Promise.all([
-        prisma.rapidStepTest.findMany({
-          where: { userId: user.id },
-          orderBy: { completedAt: "desc" },
-          take: 5,
-        }),
-        DeviceService.getActiveAssignmentsForUser(user.id!),
-      ])
-    : [[], []];
+
+  let tests: any[] = [];
+  let assignments: any[] = [];
+
+  if (hasLocalUser) {
+    tests = await prisma.rapidStepTest.findMany({
+      where: { userId: user.id },
+      orderBy: { completedAt: "desc" },
+      take: 5,
+    });
+    assignments = await DeviceService.getActiveAssignmentsForUser(user.id!);
+  } else if (user.profileId) {
+    tests = await prisma.rapidStepTest.findMany({
+      where: { profileId: user.profileId },
+      orderBy: { completedAt: "desc" },
+      take: 5,
+    });
+    assignments = await DeviceService.getActiveAssignmentsForProfile(user.profileId);
+  }
 
   const latestTest = tests[0];
 
@@ -42,7 +51,7 @@ export default async function PatientPortalHomePage() {
         <p className="mt-3 max-w-2xl text-sm text-sky-50">
           Review your account details, check assigned devices, and keep track of your most recent rapid step tests.
         </p>
-        {stediMode && !hasLocalUser ? (
+        {stediMode && !hasLocalUser && !user.profileId ? (
           <p className="mt-3 text-sm text-sky-100">
             Connected with STEDI token. Local patient profile data is unavailable for this account.
           </p>

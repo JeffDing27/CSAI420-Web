@@ -4,7 +4,7 @@ import { POST as claimPOST } from '../app/devices/claim/route';
 import { POST as unassignPOST } from '../app/devices/[deviceId]/unassign/route';
 import { GET as mineGET } from '../app/devices/mine/route';
 import { DeviceService } from '../services/device.service';
-import { AuthService } from '../lib/service/auth.service';
+import { StediAuthService } from '../lib/service/stedi-auth.service';
 import { DeviceStatus, DeviceAssignmentMethod } from '@prisma/client';
 
 vi.mock('../services/device.service', () => ({
@@ -16,9 +16,9 @@ vi.mock('../services/device.service', () => ({
   }
 }));
 
-vi.mock('../lib/service/auth.service', () => ({
-  AuthService: {
-    validateSession: vi.fn()
+vi.mock('../lib/service/stedi-auth.service', () => ({
+  StediAuthService: {
+    resolveAuthenticatedProfile: vi.fn()
   }
 }));
 
@@ -106,7 +106,7 @@ describe('Device API Routes', () => {
     });
 
     it('returns 400 for invalid claim code format', async () => {
-      (AuthService.validateSession as any).mockResolvedValue({ userId: 'u1' });
+      (StediAuthService.resolveAuthenticatedProfile as any).mockResolvedValue({ profile: { id: 'p1' } });
       const req = createRequest({ 
         method: 'POST', 
         headers: { authorization: 'Bearer valid-token' },
@@ -117,7 +117,7 @@ describe('Device API Routes', () => {
     });
 
     it('successfully claims and ignores request body userId', async () => {
-      (AuthService.validateSession as any).mockResolvedValue({ userId: 'u1' });
+      (StediAuthService.resolveAuthenticatedProfile as any).mockResolvedValue({ profile: { id: 'p1' } });
       (DeviceService.claimDevice as any).mockResolvedValue({
         isNew: true,
         device: { deviceId: 'DEV-001', status: DeviceStatus.ASSIGNED },
@@ -133,7 +133,7 @@ describe('Device API Routes', () => {
       
       expect(res.status).toBe(201);
       expect(DeviceService.claimDevice).toHaveBeenCalledWith({
-        userId: 'u1',
+        profileId: 'p1',
         claimCode: '123456',
         method: DeviceAssignmentMethod.MOBILE
       });
@@ -144,7 +144,7 @@ describe('Device API Routes', () => {
     });
 
     it('returns 200 for idempotent claim', async () => {
-      (AuthService.validateSession as any).mockResolvedValue({ userId: 'u1' });
+      (StediAuthService.resolveAuthenticatedProfile as any).mockResolvedValue({ profile: { id: 'p1' } });
       (DeviceService.claimDevice as any).mockResolvedValue({
         isNew: false,
         device: { deviceId: 'DEV-001', status: DeviceStatus.ASSIGNED },
@@ -162,7 +162,7 @@ describe('Device API Routes', () => {
     });
 
     it('returns 409 if assigned to another patient', async () => {
-      (AuthService.validateSession as any).mockResolvedValue({ userId: 'u1' });
+      (StediAuthService.resolveAuthenticatedProfile as any).mockResolvedValue({ profile: { id: 'p1' } });
       (DeviceService.claimDevice as any).mockRejectedValue(new Error('Device is already assigned to another patient'));
 
       const req = createRequest({ 
@@ -184,7 +184,7 @@ describe('Device API Routes', () => {
     });
 
     it('returns 403 on wrong-patient unassignment', async () => {
-      (AuthService.validateSession as any).mockResolvedValue({ userId: 'u1' });
+      (StediAuthService.resolveAuthenticatedProfile as any).mockResolvedValue({ profile: { id: 'p1' } });
       (DeviceService.unassignDevice as any).mockRejectedValue(new Error('Device is not assigned to this user'));
 
       const req = createRequest({ 
@@ -196,7 +196,7 @@ describe('Device API Routes', () => {
     });
 
     it('successfully unassigns', async () => {
-      (AuthService.validateSession as any).mockResolvedValue({ userId: 'u1' });
+      (StediAuthService.resolveAuthenticatedProfile as any).mockResolvedValue({ profile: { id: 'p1' } });
       (DeviceService.unassignDevice as any).mockResolvedValue({
         device: { deviceId: 'DEV-001', status: DeviceStatus.UNASSIGNED },
         assignment: { unassignedAt: new Date() }
@@ -217,8 +217,8 @@ describe('Device API Routes', () => {
 
   describe('GET /devices/mine', () => {
     it('returns current patient devices with no hashes', async () => {
-      (AuthService.validateSession as any).mockResolvedValue({ userId: 'u1' });
-      (DeviceService.getActiveAssignmentsForUser as any).mockResolvedValue([
+      (StediAuthService.resolveAuthenticatedProfile as any).mockResolvedValue({ profile: { id: 'p1' } });
+      (DeviceService.getActiveAssignmentsForProfile as any).mockResolvedValue([
         {
           id: 'a1', method: DeviceAssignmentMethod.MOBILE, assignedAt: new Date(),
           device: { deviceId: 'DEV-001', status: DeviceStatus.ASSIGNED, lastSeenAt: null, claimCodeHash: 'secret' }

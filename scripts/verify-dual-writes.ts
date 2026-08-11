@@ -87,6 +87,7 @@ async function main() {
       email,
       name: "Test User",
       externalCustomerId: null,
+      profileId: null,
     });
     const dbCustomer = await prisma.customerReference.findUnique({ where: { phone } });
     if (!dbCustomer) throw new Error("CustomerReference dual-write failed");
@@ -131,6 +132,7 @@ async function main() {
       source: "MOCK",
       completedAt: new Date(),
       deviceRecordId: null,
+      profileId: null,
     });
     const dbRst = await prisma.rapidStepTest.findUnique({ where: { id: rst.id } });
     if (!dbRst) throw new Error("RapidStepTest dual-write failed");
@@ -222,7 +224,8 @@ async function main() {
       data: {
         callSid: `sid-${randomUUID()}`,
         stage: "INITIAL",
-        expiresAt: new Date()
+        expiresAt: new Date(),
+        profileId: null,
       }
     });
     if (!vs) throw new Error("VoiceSession failed");
@@ -296,7 +299,8 @@ async function main() {
         eventType: "TEST",
         entityType: "USER",
         entityId: dbUser.id,
-        safeMetadata: {}
+        safeMetadata: {},
+        profileId: null,
       }
     });
     if (!audit) throw new Error("AuditEvent failed");

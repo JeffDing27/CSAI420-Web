@@ -7,7 +7,7 @@ import { getPatientPortalUser } from "../../portal-auth";
 export async function claimPatientDevice(formData: FormData) {
   const { user } = await getPatientPortalUser();
 
-  if (!user.id) {
+  if (!user.id && !user.profileId) {
     return {
       error:
         "This STEDI-only account is not mapped to a local patient profile, so device claiming is unavailable.",
@@ -21,11 +21,19 @@ export async function claimPatientDevice(formData: FormData) {
   }
 
   try {
-    await DeviceService.claimDevice({
-      userId: user.id,
-      claimCode,
-      method: "MOBILE" as any,
-    });
+    if (user.id) {
+      await DeviceService.claimDevice({
+        userId: user.id,
+        claimCode,
+        method: "MOBILE" as any,
+      });
+    } else if (user.profileId) {
+      await DeviceService.claimDevice({
+        profileId: user.profileId,
+        claimCode,
+        method: "MOBILE" as any,
+      });
+    }
     revalidatePath("/patient");
     revalidatePath("/patient/devices");
     return { success: true };

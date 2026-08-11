@@ -7,14 +7,16 @@ export default async function PatientDevicesPage() {
   const hasLocalUser = Boolean(user.id);
   const assignments = hasLocalUser
     ? await DeviceService.getActiveAssignmentsForUser(user.id!)
-    : [];
+    : user.profileId
+      ? await DeviceService.getActiveAssignmentsForProfile(user.profileId)
+      : [];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Devices</h1>
         <p className="mt-1 text-sm text-slate-500">Manage devices linked to your account.</p>
-        {stediMode && !hasLocalUser ? (
+        {stediMode && !hasLocalUser && !user.profileId ? (
           <p className="mt-2 text-xs text-amber-600">
             Device management requires a local patient profile mapping for this STEDI account.
           </p>
