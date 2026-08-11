@@ -471,9 +471,10 @@ function applyDetailedOverrides(
 
   setOp("/riskscore/{email}", "get", {
     summary: "Get risk score by email",
-    description: "Returns calculated risk score for a user email.",
+    description:
+      "Bridges to the upstream STEDI GET /riskscore/{email} endpoint and returns the upstream response body unchanged.",
     tags: ["risk"],
-    security: [{ sessionTokenHeader: [] }, { bearerAuth: [] }],
+    security: [{ sessionTokenHeader: [] }],
     parameters: [
       {
         name: "email",
@@ -482,18 +483,45 @@ function applyDetailedOverrides(
         schema: { type: "string", format: "email" },
         example: "jane@example.com",
       },
+      {
+        name: "suresteps-session-token",
+        in: "header",
+        required: true,
+        schema: { type: "string" },
+        example: "bd41655f-96cb-42c0-9c71-e0620d42a17f",
+        description:
+          "Session token forwarded upstream as suresteps.session.token when calling STEDI.",
+      },
     ],
     responses: {
       "200": {
-        description: "Risk score response.",
+        description: "Raw upstream STEDI risk score response.",
         content: {
           "application/json": {
-            schema: { $ref: "#/components/schemas/RiskScoreResponse" },
+            schema: {
+              oneOf: [{ type: "number", example: 1.5 }, { type: "object", additionalProperties: true }],
+            },
+          },
+          "text/plain": {
+            schema: { type: "string", example: "1.5" },
+          },
+        },
+      },
+      "401": {
+        description: "Missing suresteps-session-token header.",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ErrorResponse" },
+            examples: {
+              missingHeader: {
+                value: { error: "Missing suresteps-session-token header" },
+              },
+            },
           },
         },
       },
       "500": {
-        description: "Failed to calculate risk score.",
+        description: "Failed to fetch risk score from upstream STEDI service.",
         content: {
           "text/plain": {
             schema: { type: "string", example: "Internal Server Error" },

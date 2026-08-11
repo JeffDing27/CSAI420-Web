@@ -1,27 +1,16 @@
-import { RepositoryFactory } from "@/repositories/provider-factory";
-
 export class RiskScoreService {
-  private userRepo = RepositoryFactory.getUserRepository();
-  private testRepo = RepositoryFactory.getRapidStepTestRepository();
+  private readonly baseUrl =
+    process.env.STEDI_API_BASE_URL || "https://dev.stedi.me";
 
-  async calculateRiskScore(customerIdentifier: string): Promise<number> {
-    // Attempt to find user
-    let user = await this.userRepo.findByEmail(customerIdentifier);
-    if (!user) {
-      user = await this.userRepo.findByPhone(customerIdentifier);
-    }
-    if (!user) {
-      user = await this.userRepo.findByUsername(customerIdentifier);
-    }
-
-    if (user) {
-      const tests = await this.testRepo.findByUserId(user.id);
-      if (tests.length > 0) {
-        // Return 1.5 as default for now, can be extended to use actual test data
-        return 1.5;
-      }
-    }
-
-    return 1.5;
+  async fetchRiskScore(email: string, sessionToken: string): Promise<Response> {
+    const target = `${this.baseUrl}/riskscore/${encodeURIComponent(email)}`;
+    return fetch(target, {
+      method: "GET",
+      headers: {
+        accept: "application/json, text/plain;q=0.9, */*;q=0.8",
+        "suresteps.session.token": sessionToken,
+      },
+      cache: "no-store",
+    });
   }
 }

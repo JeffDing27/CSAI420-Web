@@ -57,7 +57,9 @@ export class AuthSessionRepository {
     const provider = process.env.STORAGE_PROVIDER || "kv";
 
     if (provider === "supabase" || provider === "dual") {
-      await prisma.authSession.update({
+      // Use updateMany so revoke is idempotent when the token does not exist
+      // in local storage (for example, STEDI-issued session tokens).
+      await prisma.authSession.updateMany({
         where: { tokenHash },
         data: { revokedAt: new Date() },
       });
