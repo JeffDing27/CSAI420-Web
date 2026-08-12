@@ -215,6 +215,14 @@ describe("Guided IVR legacy authentication", () => {
     ).toHaveBeenCalledWith("8017190908", "08151990");
   });
 
+  it("never enables the spoken-name mock flow in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("USE_MOCK_TEST_DEVICE", "true");
+    vi.stubEnv("IVR_USE_LEGACY_API_IN_TESTS", "false");
+
+    expect(new VoiceService().shouldUseLegacyApi()).toBe(true);
+  });
+
   it("requires real device measurements for legacy score submission", async () => {
     const sensorCallSid = "CA-legacy-sensor";
     const service = new VoiceService();

@@ -52,7 +52,9 @@ report connectivity without a step, send
 - `TWILIO_AUTH_TOKEN`: required when Twilio signature validation is enabled.
 - `TWILIO_WEBHOOK_URL`: optional public webhook URL used for signature checks.
 - `IVR_REST_SECONDS`: defaults to `180`; lower values are useful in tests.
-- `USE_MOCK_TEST_DEVICE=true`: accepts Test User / `01011990` locally.
+- `USE_MOCK_TEST_DEVICE=true`: accepts Test User / `01011990` locally. This
+  flag is always ignored in production, where phone and birthdate verification
+  are mandatory.
 - `IVR_TEST_SCORE`: optional score returned only in test/mock mode.
 - `STEDI_API_BASE_URL`: defaults to `https://dev.stedi.me`.
 
