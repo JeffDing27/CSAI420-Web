@@ -14,6 +14,25 @@ export class AuthService {
     return phone.replace(/[^\d+]/g, "");
   }
 
+  static async createSession(userId: string): Promise<string> {
+    const rawToken = crypto.randomUUID();
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(rawToken)
+      .digest("hex");
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    await AuthSessionRepository.create({
+      userId,
+      tokenHash,
+      expiresAt,
+      revokedAt: null,
+    });
+
+    return rawToken;
+  }
+
   static async signup(
     payload: any,
   ): Promise<{ user: User | null; error?: string }> {

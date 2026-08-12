@@ -1,5 +1,6 @@
 import type { RagChunk, RagDocument } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import type { RagChunkWrite, RagDocumentWrite } from "@/repositories/interfaces";
 import { normalizeJson } from "@/utils/json-normalize";
 
 export class RagRepository {
@@ -9,7 +10,7 @@ export class RagRepository {
     });
   }
 
-  async createDocument(doc: Omit<RagDocument, "id">): Promise<RagDocument> {
+  async createDocument(doc: RagDocumentWrite): Promise<RagDocument> {
     return prisma.ragDocument.create({
       data: {
         ...doc,
@@ -18,7 +19,7 @@ export class RagRepository {
     });
   }
 
-  async addChunks(chunks: Omit<RagChunk, "id" | "createdAt">[]): Promise<void> {
+  async addChunks(chunks: RagChunkWrite[]): Promise<void> {
     await prisma.ragChunk.createMany({
       data: chunks.map((chunk) => ({
         ...chunk,
@@ -28,7 +29,7 @@ export class RagRepository {
     });
   }
 
-  async similaritySearch(queryEmbedding: any, limit = 5): Promise<RagChunk[]> {
+  async similaritySearch(queryEmbedding: unknown, limit = 5): Promise<RagChunk[]> {
     // If pgvector is enabled, this would use a raw query with the <-> operator:
     // return prisma.$queryRaw`SELECT * FROM "RagChunk" ORDER BY embedding <-> ${queryEmbedding}::vector LIMIT ${limit}`
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { RepositoryFactory } from "@/repositories/provider-factory";
-import crypto from "crypto";
+import { AuthService } from "@/lib/service/auth.service";
 
 const getCorsHeaders = () => ({
   "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "*",
@@ -26,8 +26,7 @@ export async function POST(request: Request) {
          return new Response("No test user available", { status: 400, headers: getCorsHeaders() });
       }
       
-      const token = crypto.randomBytes(32).toString("hex");
-      await (RepositoryFactory.getSessionRepository() as any).createSession(user.id, token, new Date(Date.now() + 86400000));
+      const token = await AuthService.createSession(user.id);
       
       return new Response(token, { status: 200, headers: { ...getCorsHeaders(), "content-type": "text/plain" } });
     } catch (e) {

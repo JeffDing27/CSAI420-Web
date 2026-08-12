@@ -4,8 +4,9 @@ import { kvGet, kvSet } from "@/utils/kv-store";
 
 export type CreateUserParams = Omit<
   User,
-  "id" | "createdAt" | "updatedAt" | "externalUserId"
->;
+  "id" | "createdAt" | "updatedAt" | "externalUserId" | "role"
+> &
+  Partial<Pick<User, "externalUserId" | "role">>;
 
 export class UserRepository {
   static async findByEmail(email: string): Promise<User | null> {
@@ -87,6 +88,7 @@ export class UserRepository {
     if (provider === "kv" || provider === "dual") {
       const kvData = {
         ...data,
+        role: data.role || "PATIENT",
         id: createdUser ? createdUser.id : crypto.randomUUID(),
       };
       await kvSet(`user:${data.email}`, kvData);
