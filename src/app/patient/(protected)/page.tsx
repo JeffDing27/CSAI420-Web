@@ -2,6 +2,7 @@ import PatientInformationCard from "@/components/PatientInformationCard";
 import { prisma } from "@/lib/prisma";
 import { DeviceService } from "@/services/device.service";
 import { getPatientPortalUser } from "../portal-auth";
+import { cookies } from "next/headers";
 
 function calculateAge(birthDate: string) {
   const dob = new Date(birthDate);
@@ -18,9 +19,37 @@ function calculateAge(birthDate: string) {
   return age;
 }
 
+// NEW: fallback fetch from local pass-through API
+async function getBirthDateFromLocalUserApi(email?: string | null): Promise<string | null> {
+  if (!email) return null;
+
+  try {
+    const cookieStore = await cookies();
+    const surestepsToken = cookieStore.get("suresteps.session.token")?.value;
+
+    const baseUrl = process.env.INTERNAL_API_BASE_URL || "http://localhost:3000";
+    const response = await fetch(`${baseUrl}/user/${encodeURIComponent(email)}`, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        ...(surestepsToken ? { "suresteps.session.token": surestepsToken } : {}),
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as { birthDate?: string };
+    return typeof data.birthDate === "string" ? data.birthDate : null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function PatientPortalHomePage() {
   const { user, stediMode } = await getPatientPortalUser();
   const hasLocalUser = Boolean(user.id);
+
   const [tests, assignments] = hasLocalUser
     ? await Promise.all([
         prisma.rapidStepTest.findMany({
@@ -31,6 +60,10 @@ export default async function PatientPortalHomePage() {
         DeviceService.getActiveAssignmentsForUser(user.id!),
       ])
     : [[], []];
+
+  // NEW: use API birthDate when local user.birthDate is missing
+  const apiBirthDate = !user.birthDate ? await getBirthDateFromLocalUserApi(user.email) : null;
+  const birthDateForAge = user.birthDate || apiBirthDate || "";
 
   const latestTest = tests[0];
 
@@ -52,7 +85,7 @@ export default async function PatientPortalHomePage() {
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <PatientInformationCard
           name={`${user.firstName} ${user.lastName}`}
-          age={calculateAge(user.birthDate)}
+          age={calculateAge(birthDateForAge)}
           email={user.email}
           assessmentDate={latestTest?.completedAt ? new Date(latestTest.completedAt).toLocaleDateString() : "No assessment yet"}
           status={assignments.length > 0 ? "Device connected" : "No device assigned"}
