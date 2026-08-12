@@ -29,10 +29,8 @@ export type AuthenticatedPatient = {
 };
 
 function usesMockUpstream(): boolean {
-  // Never allow a stale deployment setting to switch the production IVR back
-  // to the local spoken-name flow or to fabricate a score.
-  if (process.env.NODE_ENV === "production") return false;
-  if (process.env.USE_MOCK_TEST_DEVICE === "true") return true;
+  // Mock authentication is test-only. Deployment environment flags must never
+  // switch a real phone call back to the spoken-name flow or fabricate a score.
   return (
     process.env.NODE_ENV === "test" &&
     process.env.IVR_USE_LEGACY_API_IN_TESTS !== "true"
@@ -233,9 +231,7 @@ export class VoiceService {
 
     const normalizedName = normalizePatientName(patientName);
     if (
-      (process.env.NODE_ENV === "test" ||
-        (process.env.NODE_ENV !== "production" &&
-          process.env.USE_MOCK_TEST_DEVICE === "true")) &&
+      process.env.NODE_ENV === "test" &&
       normalizedName === "test user" &&
       birthDate === "1990-01-01"
     ) {

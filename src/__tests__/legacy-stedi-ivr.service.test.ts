@@ -215,8 +215,8 @@ describe("Guided IVR legacy authentication", () => {
     ).toHaveBeenCalledWith("8017190908", "08151990");
   });
 
-  it("never enables the spoken-name mock flow in production", () => {
-    vi.stubEnv("NODE_ENV", "production");
+  it("never enables the spoken-name mock flow outside tests", () => {
+    vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("USE_MOCK_TEST_DEVICE", "true");
     vi.stubEnv("IVR_USE_LEGACY_API_IN_TESTS", "false");
 
