@@ -2,14 +2,28 @@ import type { ClinicianAccessRequest } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { ClinicianAccessRequestRepository } from "../interfaces";
 
-export class PrismaClinicianAccessRequestRepository
-  implements ClinicianAccessRequestRepository
-{
+export class PrismaClinicianAccessRequestRepository implements ClinicianAccessRequestRepository {
   async findByCustomer(
     customerEmail: string,
   ): Promise<ClinicianAccessRequest[]> {
     return prisma.clinicianAccessRequest.findMany({
       where: { customerEmail },
+    });
+  }
+  async findById(id: string): Promise<ClinicianAccessRequest | null> {
+    return prisma.clinicianAccessRequest.findUnique({
+      where: { id },
+    });
+  }
+
+  async findByClinicianUsername(
+    clinicianUsername: string,
+  ): Promise<ClinicianAccessRequest[]> {
+    return prisma.clinicianAccessRequest.findMany({
+      where: { clinicianUsername },
+      orderBy: {
+        requestDate: "desc",
+      },
     });
   }
 
