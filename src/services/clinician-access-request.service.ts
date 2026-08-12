@@ -20,6 +20,23 @@ export class ClinicianAccessRequestService {
     });
   }
 
+  async getRequestById(id: string): Promise<ClinicianAccessRequest | null> {
+    return this.repo.findById(id);
+  }
+
+  async getRequestsForClinician(
+    clinicianUsername: string,
+  ): Promise<ClinicianAccessRequest[]> {
+    return this.repo.findByClinicianUsername(clinicianUsername);
+  }
+
+  async updateStatus(
+    id: string,
+    status: string,
+  ): Promise<ClinicianAccessRequest> {
+    return this.repo.updateStatus(id, status);
+  }
+
   async deleteRequest(
     customerEmail: string,
     clinicianUsername: string,

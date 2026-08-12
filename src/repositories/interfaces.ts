@@ -64,11 +64,21 @@ export interface ConsentRepository {
 
 export interface ConsentedClinicianRepository {
   findByCustomer(customer: string): Promise<ConsentedClinician[]>;
+  findByClinicianUsername(
+    clinicianUsername: string,
+  ): Promise<ConsentedClinician[]>;
   add(customer: string, clinicianUsername: string): Promise<ConsentedClinician>;
 }
 
 export interface ClinicianAccessRequestRepository {
+  findById(id: string): Promise<ClinicianAccessRequest | null>;
+
   findByCustomer(customerEmail: string): Promise<ClinicianAccessRequest[]>;
+
+  findByClinicianUsername(
+    clinicianUsername: string,
+  ): Promise<ClinicianAccessRequest[]>;
+
   create(
     request: Omit<ClinicianAccessRequest, "id" | "createdAt" | "updatedAt">,
   ): Promise<ClinicianAccessRequest>;
