@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { RapidStepTestService } from "@/services/rapid-step-test.service";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 describe("RapidStepTest Service", () => {
   const service = new RapidStepTestService();

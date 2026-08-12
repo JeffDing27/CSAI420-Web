@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
 import { DELETE, POST } from "@/app/clinicianAccessRequest/route";
 import { GET } from "@/app/clinicianAccessRequests/[customer]/route";
 
@@ -13,7 +14,7 @@ describe("Week 3: Clinician Access Requests", () => {
     const headers = new Headers();
     if (token) headers.set("suresteps.session.token", token);
 
-    return new Request(`http://localhost/api/test`, {
+    return new NextRequest(`http://localhost/api/test`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,

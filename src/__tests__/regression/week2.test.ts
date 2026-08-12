@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { NextRequest } from "next/server";
 import {
   GET as GetConsent,
   PATCH as PatchConsent,
@@ -10,7 +11,7 @@ import {
 
 describe("Week 2: Consent and Clinicians", () => {
   const createRequest = (method: string, body?: string) => {
-    return new Request(`http://localhost/api/test`, {
+    return new NextRequest(`http://localhost/api/test`, {
       method,
       body: body ? body : undefined,
     });

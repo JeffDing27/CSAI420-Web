@@ -40,14 +40,14 @@ describe('device-secrets', () => {
 
   describe('PEPPER behavior', () => {
     it('uses local-development fallback when NODE_ENV is not production and pepper is absent', () => {
-      process.env.NODE_ENV = 'development';
+      vi.stubEnv('NODE_ENV', 'development');
       delete process.env.DEVICE_CLAIM_PEPPER;
       const hash1 = hashClaimCode('123456');
       expect(hash1).toBeDefined();
     });
 
     it('uses configured pepper when it exists', () => {
-      process.env.NODE_ENV = 'development';
+      vi.stubEnv('NODE_ENV', 'development');
       process.env.DEVICE_CLAIM_PEPPER = 'my-secret-pepper';
       const hash1 = hashClaimCode('123456');
       
@@ -58,7 +58,7 @@ describe('device-secrets', () => {
     });
 
     it('throws in production when DEVICE_CLAIM_PEPPER is absent', () => {
-      process.env.NODE_ENV = 'production';
+      vi.stubEnv('NODE_ENV', 'production');
       delete process.env.DEVICE_CLAIM_PEPPER;
       
       expect(() => hashClaimCode('123456')).toThrow('DEVICE_CLAIM_PEPPER is missing in production');

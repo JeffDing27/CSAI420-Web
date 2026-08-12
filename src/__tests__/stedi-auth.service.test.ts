@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { StediAuthService } from '../lib/service/stedi-auth.service';
-import prisma from '../lib/prisma';
+import { prisma } from '../lib/prisma';
 import { ProfileRole } from '@prisma/client';
 
 // Mock fetch globally
@@ -9,14 +9,12 @@ const originalFetch = global.fetch;
 describe('StediAuthService', () => {
   beforeEach(() => {
     global.fetch = vi.fn();
-    vi.spyOn(prisma.profile, 'upsert').mockImplementation(async (args: any) => {
-      return {
-        id: 'mock-profile-id',
-        externalEmail: args.create.externalEmail,
-        role: args.create.role,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      } as any;
+    vi.spyOn(prisma.profile, 'upsert').mockResolvedValue({
+      id: 'mock-profile-id',
+      externalEmail: 'patient@example.com',
+      role: ProfileRole.PATIENT,
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
   });
 

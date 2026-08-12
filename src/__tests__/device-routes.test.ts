@@ -5,6 +5,7 @@ import { POST as unassignPOST } from '../app/devices/[deviceId]/unassign/route';
 import { GET as mineGET } from '../app/devices/mine/route';
 import { DeviceService } from '../services/device.service';
 import { StediAuthService } from '../lib/service/stedi-auth.service';
+import { AuthService } from '../lib/service/auth.service';
 import { DeviceStatus, DeviceAssignmentMethod } from '@prisma/client';
 
 vi.mock('../services/device.service', () => ({
@@ -12,13 +13,19 @@ vi.mock('../services/device.service', () => ({
     provisionDevice: vi.fn(),
     claimDevice: vi.fn(),
     unassignDevice: vi.fn(),
-    getActiveAssignmentsForUser: vi.fn(),
+    getActiveAssignmentsForProfile: vi.fn(),
   }
 }));
 
 vi.mock('../lib/service/stedi-auth.service', () => ({
   StediAuthService: {
     resolveAuthenticatedProfile: vi.fn()
+  }
+}));
+
+vi.mock('../lib/service/auth.service', () => ({
+  AuthService: {
+    validateSession: vi.fn()
   }
 }));
 
@@ -42,6 +49,10 @@ describe('Device API Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env = { ...originalEnv };
+    (StediAuthService.resolveAuthenticatedProfile as any).mockResolvedValue({
+      error: 'Unauthorized',
+      status: 401,
+    });
   });
 
   afterAll(() => {
@@ -179,24 +190,28 @@ describe('Device API Routes', () => {
   describe('POST /devices/[deviceId]/unassign', () => {
     it('returns 401 if unauthenticated', async () => {
       const req = createRequest({ method: 'POST' });
-      const res = await unassignPOST(req, { params: { deviceId: 'DEV-001' } });
+      const res = await unassignPOST(req, {
+        params: Promise.resolve({ deviceId: 'DEV-001' }),
+      });
       expect(res.status).toBe(401);
     });
 
     it('returns 403 on wrong-patient unassignment', async () => {
-      (StediAuthService.resolveAuthenticatedProfile as any).mockResolvedValue({ profile: { id: 'p1' } });
+      (AuthService.validateSession as any).mockResolvedValue({ userId: 'u1' });
       (DeviceService.unassignDevice as any).mockRejectedValue(new Error('Device is not assigned to this user'));
 
       const req = createRequest({ 
         method: 'POST', 
         headers: { authorization: 'Bearer valid-token' }
       });
-      const res = await unassignPOST(req, { params: { deviceId: 'DEV-001' } });
+      const res = await unassignPOST(req, {
+        params: Promise.resolve({ deviceId: 'DEV-001' }),
+      });
       expect(res.status).toBe(403);
     });
 
     it('successfully unassigns', async () => {
-      (StediAuthService.resolveAuthenticatedProfile as any).mockResolvedValue({ profile: { id: 'p1' } });
+      (AuthService.validateSession as any).mockResolvedValue({ userId: 'u1' });
       (DeviceService.unassignDevice as any).mockResolvedValue({
         device: { deviceId: 'DEV-001', status: DeviceStatus.UNASSIGNED },
         assignment: { unassignedAt: new Date() }
@@ -206,7 +221,9 @@ describe('Device API Routes', () => {
         method: 'POST', 
         headers: { authorization: 'Bearer valid-token' }
       });
-      const res = await unassignPOST(req, { params: { deviceId: 'DEV-001' } });
+      const res = await unassignPOST(req, {
+        params: Promise.resolve({ deviceId: 'DEV-001' }),
+      });
       
       expect(res.status).toBe(200);
       const data = await res.json();

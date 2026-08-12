@@ -2,6 +2,29 @@ import type { User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { UserRepository } from "../interfaces";
 
+export function birthDateVariants(birthDate: string): string[] {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthDate);
+  if (!match) return [birthDate];
+
+  const [, year, paddedMonth, paddedDay] = match;
+  const month = String(Number(paddedMonth));
+  const day = String(Number(paddedDay));
+
+  return [
+    birthDate,
+    `${paddedMonth}/${paddedDay}/${year}`,
+    `${month}/${day}/${year}`,
+    `${paddedMonth}-${paddedDay}-${year}`,
+    `${month}-${day}-${year}`,
+    `${paddedMonth}${paddedDay}${year}`,
+    `${month}${paddedDay}${year}`,
+    `${paddedMonth}${day}${year}`,
+    `${month}${day}${year}`,
+    `${year}/${paddedMonth}/${paddedDay}`,
+    `${year}${paddedMonth}${paddedDay}`,
+  ];
+}
+
 export class PrismaUserRepository implements UserRepository {
   async findById(id: string): Promise<User | null> {
     return prisma.user.findUnique({ where: { id } });
@@ -22,7 +45,9 @@ export class PrismaUserRepository implements UserRepository {
   }
 
   async findByBirthDate(birthDate: string): Promise<User[]> {
-    return prisma.user.findMany({ where: { birthDate } });
+    return prisma.user.findMany({
+      where: { birthDate: { in: birthDateVariants(birthDate) } },
+    });
   }
 
   async create(

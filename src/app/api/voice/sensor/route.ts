@@ -8,6 +8,8 @@ type SensorPayload = {
   CallSid?: string;
   event?: "connected" | "step";
   steps?: number;
+  stepPoints?: number[];
+  deviceId?: string;
 };
 
 function authorized(request: Request): boolean {
@@ -27,11 +29,16 @@ export async function POST(request: Request) {
       payload = (await request.json()) as SensorPayload;
     } else {
       const params = new URLSearchParams(await request.text());
+      const rawStepPoints = params.get("stepPoints");
       payload = {
         callSid: params.get("callSid") ?? undefined,
         CallSid: params.get("CallSid") ?? undefined,
         event: (params.get("event") as SensorPayload["event"]) ?? undefined,
         steps: params.has("steps") ? Number(params.get("steps")) : undefined,
+        stepPoints: rawStepPoints
+          ? (JSON.parse(rawStepPoints) as number[])
+          : undefined,
+        deviceId: params.get("deviceId") ?? undefined,
       };
     }
   } catch {
@@ -55,9 +62,39 @@ export async function POST(request: Request) {
     });
   }
 
+  const stepPoints = payload.stepPoints ?? [];
+  if (
+    !Array.isArray(stepPoints) ||
+    stepPoints.some(
+      (point) =>
+        typeof point !== "number" || !Number.isFinite(point) || point <= 0,
+    )
+  ) {
+    return new NextResponse("stepPoints must contain positive numbers", {
+      status: 400,
+    });
+  }
+  if (
+    voiceService.shouldUseLegacyApi() &&
+    requestedSteps > 0 &&
+    stepPoints.length !== requestedSteps
+  ) {
+    return new NextResponse(
+      "stepPoints must contain one measurement for each recorded step",
+      { status: 400 },
+    );
+  }
+  if (payload.deviceId !== undefined && !payload.deviceId.trim()) {
+    return new NextResponse("deviceId cannot be empty", { status: 400 });
+  }
+
   const session = await voiceService.recordSensorUpdate(
     callSid,
     requestedSteps,
+    {
+      deviceId: payload.deviceId?.trim(),
+      stepPoints,
+    },
   );
   if (!session) {
     return new NextResponse("Voice session not found", { status: 404 });
@@ -68,5 +105,6 @@ export async function POST(request: Request) {
     stage: session.stage,
     setOneSteps: Math.min(session.setOneSteps, 30),
     setTwoSteps: Math.min(session.setTwoSteps, 30),
+    stepPointsAccepted: stepPoints.length,
   });
 }

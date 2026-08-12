@@ -1,6 +1,7 @@
 import { VoiceStage } from "@prisma/client";
 import { NextResponse } from "next/server";
 import twilio from "twilio";
+import { LegacyStediApiError } from "@/services/legacy-stedi-ivr.service";
 import { VoiceService } from "@/services/voice.service";
 
 const { VoiceResponse } = twilio.twiml;
@@ -54,7 +55,10 @@ function restSeconds(): number {
 }
 
 function validSignature(request: Request, params: URLSearchParams): boolean {
-  if (process.env.IVR_VALIDATE_TWILIO_SIGNATURE !== "true") return true;
+  const validationEnabled =
+    process.env.IVR_VALIDATE_TWILIO_SIGNATURE === "true" ||
+    process.env.TWILIO_VALIDATE_SIGNATURES === "true";
+  if (!validationEnabled) return true;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const signature = request.headers.get("x-twilio-signature");
   if (!authToken || !signature) return false;
@@ -77,6 +81,7 @@ export async function POST(request: Request) {
   const callSid = params.get("CallSid") || "test_sid";
   const digits = params.get("Digits")?.trim() ?? "";
   const speech = params.get("SpeechResult")?.trim() ?? "";
+  const usesLegacyApi = voiceService.shouldUseLegacyApi();
   let session = await voiceService.getSession(callSid);
 
   if (session && session.expiresAt < new Date()) {
@@ -103,17 +108,90 @@ export async function POST(request: Request) {
   }
 
   switch (session.stage) {
-    case VoiceStage.INITIAL:
-    case VoiceStage.AWAITING_NAME:
+    case VoiceStage.INITIAL: {
+      if (usesLegacyApi) {
+        await voiceService.updateSession(callSid, {
+          stage: VoiceStage.AWAITING_PHONE,
+        });
+        gatherChoice(
+          twiml,
+          "Welcome to the STEDI Mobility Coach. Enter the ten-digit phone number on your STEDI account.",
+          10,
+        );
+        break;
+      }
+
+      await voiceService.updateSession(callSid, {
+        stage: VoiceStage.AWAITING_NAME,
+      });
+      gatherName(
+        twiml,
+        "Welcome to the STEDI Mobility Coach. Please clearly say your first and last name.",
+      );
+      break;
+    }
+
     case VoiceStage.AWAITING_PHONE: {
-      if (!speech) {
+      if (!usesLegacyApi) {
         await voiceService.updateSession(callSid, {
           stage: VoiceStage.AWAITING_NAME,
         });
-        gatherName(
+        gatherName(twiml, "Please clearly say your first and last name.");
+        break;
+      }
+
+      if (!digits) {
+        gatherChoice(
           twiml,
-          "Welcome to the STEDI Mobility Coach. Please clearly say your first and last name.",
+          "Enter the ten-digit phone number on your STEDI account.",
+          10,
         );
+        break;
+      }
+
+      try {
+        const phoneNumber = voiceService.normalizeLegacyPhoneNumber(digits);
+        await voiceService.updateSession(callSid, {
+          stage: VoiceStage.AWAITING_DOB,
+          phoneNumber,
+        });
+        gatherChoice(
+          twiml,
+          "Using the keypad, enter your date of birth as two digits for the month, two digits for the day, and four digits for the year.",
+          8,
+        );
+      } catch {
+        gatherChoice(
+          twiml,
+          "We could not use that phone number. Enter the ten-digit phone number on your STEDI account.",
+          10,
+        );
+      }
+      break;
+    }
+
+    case VoiceStage.AUTHENTICATING: {
+      if (usesLegacyApi && session.phoneNumber) {
+        await voiceService.updateSession(callSid, {
+          stage: VoiceStage.AWAITING_DOB,
+        });
+        gatherChoice(
+          twiml,
+          "Enter your eight-digit date of birth using the keypad.",
+          8,
+        );
+        break;
+      }
+      await voiceService.updateSession(callSid, {
+        stage: VoiceStage.AWAITING_NAME,
+      });
+      gatherName(twiml, "Please clearly say your first and last name.");
+      break;
+    }
+
+    case VoiceStage.AWAITING_NAME: {
+      if (!speech) {
+        gatherName(twiml, "Please clearly say your first and last name.");
         break;
       }
 
@@ -153,7 +231,6 @@ export async function POST(request: Request) {
       break;
     }
 
-    case VoiceStage.AUTHENTICATING:
     case VoiceStage.AWAITING_DOB: {
       if (!digits) {
         gatherChoice(
@@ -161,6 +238,72 @@ export async function POST(request: Request) {
           "Enter your eight-digit date of birth using the keypad.",
           8,
         );
+        break;
+      }
+
+      if (usesLegacyApi) {
+        if (!session.phoneNumber) {
+          await voiceService.updateSession(callSid, {
+            stage: VoiceStage.AWAITING_PHONE,
+          });
+          gatherChoice(
+            twiml,
+            "Enter the ten-digit phone number on your STEDI account.",
+            10,
+          );
+          break;
+        }
+
+        try {
+          const patient = await voiceService.authenticateLegacyBirthDate(
+            session.phoneNumber,
+            digits,
+          );
+          await voiceService.updateSession(callSid, {
+            stage: VoiceStage.SAFETY_CHECK,
+            userId: patient.userId,
+            profileId: patient.profileId,
+            patientName: patient.patientName,
+            patientEmail: patient.email,
+            phoneNumber: patient.phone,
+            customerReferenceId: patient.customerReferenceId,
+            stediSessionToken: patient.stediSessionToken,
+            deviceId: patient.deviceId,
+            authenticationAttempts: 0,
+          });
+          gatherChoice(
+            twiml,
+            "Your identity is verified. Before exercising, clear the area, wear stable footwear, and make sure you feel steady enough to continue. Do not look into the device lasers, and keep children away. Stop if you feel pain, weak, or dizzy. Press 1 if you are ready, press 2 to repeat this safety message, or press 0 to stop.",
+          );
+        } catch (error) {
+          const retryable =
+            error instanceof LegacyStediApiError &&
+            [400, 401, 404].includes(error.status);
+          const attempts = session.authenticationAttempts + 1;
+          await voiceService.updateSession(callSid, {
+            stage:
+              retryable && attempts < 3
+                ? VoiceStage.AWAITING_DOB
+                : VoiceStage.FAILED,
+            authenticationAttempts: attempts,
+            ...(!retryable || attempts >= 3
+              ? { callStatus: "authentication-failed" }
+              : {}),
+          });
+          if (retryable && attempts < 3) {
+            gatherChoice(
+              twiml,
+              "That date of birth was not accepted. Enter the eight digits again.",
+              8,
+            );
+          } else {
+            twiml.say(
+              { voice: VOICE },
+              "We could not verify your information. Please try again later. Goodbye.",
+            );
+            twiml.hangup();
+          }
+        }
         break;
       }
 
@@ -192,10 +335,13 @@ export async function POST(request: Request) {
 
       await voiceService.updateSession(callSid, {
         stage: VoiceStage.SAFETY_CHECK,
-        userId: patient.id,
-        patientName: `${patient.firstName} ${patient.lastName}`,
+        userId: patient.userId,
+        profileId: patient.profileId,
+        patientName: patient.patientName,
         patientEmail: patient.email,
         phoneNumber: patient.phone,
+        customerReferenceId: patient.customerReferenceId,
+        deviceId: patient.deviceId,
         authenticationAttempts: 0,
       });
       gatherChoice(
@@ -239,7 +385,12 @@ export async function POST(request: Request) {
         });
         twiml.say({ voice: VOICE }, "No test was started. Goodbye.");
         twiml.hangup();
-      } else if (session.deviceConnected || digits === "1") {
+      } else if (
+        (!usesLegacyApi && (session.deviceConnected || digits === "1")) ||
+        (usesLegacyApi &&
+          Boolean(session.deviceId) &&
+          (session.deviceConnected || digits === "1"))
+      ) {
         await voiceService.updateSession(callSid, {
           stage: VoiceStage.AWAITING_DOMINANT_FOOT,
           deviceConnected: true,
@@ -297,6 +448,7 @@ export async function POST(request: Request) {
         await voiceService.updateSession(callSid, {
           stage: VoiceStage.SET_ONE_IN_PROGRESS,
           setOneSteps: 0,
+          setOneStepPoints: [],
           lastAnnouncedStep: 0,
           testStartedAt: new Date(),
         });
@@ -343,6 +495,7 @@ export async function POST(request: Request) {
       if (digits === "3") {
         await voiceService.updateSession(callSid, {
           ...(isSetOne ? { setOneSteps: 0 } : { setTwoSteps: 0 }),
+          ...(isSetOne ? { setOneStepPoints: [] } : { setTwoStepPoints: [] }),
           lastAnnouncedStep: 0,
         });
         twiml.say(
@@ -450,6 +603,7 @@ export async function POST(request: Request) {
         await voiceService.updateSession(callSid, {
           stage: VoiceStage.SET_TWO_IN_PROGRESS,
           setTwoSteps: 0,
+          setTwoStepPoints: [],
           lastAnnouncedStep: 0,
         });
         twiml.say(
@@ -486,10 +640,10 @@ export async function POST(request: Request) {
           stage: resumeStage,
           pausedStage: null,
           ...(digits === "3" && resumeStage === VoiceStage.SET_ONE_IN_PROGRESS
-            ? { setOneSteps: 0, lastAnnouncedStep: 0 }
+            ? { setOneSteps: 0, setOneStepPoints: [], lastAnnouncedStep: 0 }
             : {}),
           ...(digits === "3" && resumeStage === VoiceStage.SET_TWO_IN_PROGRESS
-            ? { setTwoSteps: 0, lastAnnouncedStep: 0 }
+            ? { setTwoSteps: 0, setTwoStepPoints: [], lastAnnouncedStep: 0 }
             : {}),
         });
         twiml.say(
@@ -529,7 +683,7 @@ export async function POST(request: Request) {
         });
         twiml.say(
           { voice: VOICE },
-          "We saved your exercise but could not calculate the score right now. Please try again later. Goodbye.",
+          "We could not submit the exercise or calculate the score right now. Please try again later. Goodbye.",
         );
       }
       twiml.hangup();

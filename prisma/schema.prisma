@@ -266,30 +266,35 @@ enum VoiceStage {
 }
 
 model VoiceSession {
-  id                     String     @id @default(uuid())
-  callSid                String     @unique
-  stage                  VoiceStage
-  userId                 String?
-  profileId              String?
-  patientName            String?
-  patientEmail           String?
-  phoneNumber            String?
-  customerReferenceId    String?
-  authenticationAttempts Int        @default(0)
-  dominantFoot           String?
-  deviceConnected        Boolean    @default(false)
-  setOneSteps            Int        @default(0)
-  setTwoSteps            Int        @default(0)
-  lastAnnouncedStep      Int        @default(0)
-  restStartedAt          DateTime?
-  pausedStage            String?
-  score                  Float?
-  testStartedAt          DateTime?
-  testCompletedAt        DateTime?
-  callStatus             String?
-  expiresAt              DateTime
-  createdAt              DateTime   @default(now())
-  updatedAt              DateTime   @updatedAt
+  id                      String     @id @default(uuid())
+  callSid                 String     @unique
+  stage                   VoiceStage
+  userId                  String?
+  profileId               String?
+  patientName             String?
+  patientEmail            String?
+  phoneNumber             String?
+  customerReferenceId     String?
+  stediSessionToken       String?
+  deviceId                String?
+  authenticationAttempts  Int        @default(0)
+  dominantFoot            String?
+  deviceConnected         Boolean    @default(false)
+  setOneSteps             Int        @default(0)
+  setTwoSteps             Int        @default(0)
+  setOneStepPoints        Json       @default("[]")
+  setTwoStepPoints        Json       @default("[]")
+  lastAnnouncedStep       Int        @default(0)
+  restStartedAt           DateTime?
+  pausedStage             String?
+  score                   Float?
+  testStartedAt           DateTime?
+  testCompletedAt         DateTime?
+  upstreamTestSubmittedAt DateTime?
+  callStatus              String?
+  expiresAt               DateTime
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
 
   customerReference CustomerReference? @relation(fields: [customerReferenceId], references: [id], onDelete: SetNull)
   user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
