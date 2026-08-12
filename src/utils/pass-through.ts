@@ -96,19 +96,7 @@ export async function forwardRequest(request: Request, path: string) {
       error,
     );
 
-    // Test fallbacks if fetch completely fails
-    if (path === "/login" && request.method === "POST")
-      return new Response("mocked-token-123", {
-        status: 200,
-        headers: { "content-type": "text/plain" },
-      });
-    if (path === "/rapidsteptest" && request.method === "POST")
-      return new Response("Saved", {
-        status: 200,
-        headers: { "content-type": "text/plain" },
-      });
-    if (path.startsWith("/riskscore/") && request.method === "GET")
-      return NextResponse.json({ score: 1.5 }, { status: 200 });
+
 
     return new Response("Internal Server Error", { status: 500 });
   }
@@ -155,19 +143,7 @@ export async function forwardRequest(request: Request, path: string) {
     }
     console.error(`[Pass-Through] Response Body:`, rawText);
 
-    // Test fallbacks if STEDI returns an error (e.g. 502)
-    if (path === "/login" && request.method === "POST")
-      return new Response("mocked-token-123", {
-        status: 200,
-        headers: { "content-type": "text/plain" },
-      });
-    if (path === "/rapidsteptest" && request.method === "POST")
-      return new Response("Saved", {
-        status: 200,
-        headers: { "content-type": "text/plain" },
-      });
-    if (path.startsWith("/riskscore/") && request.method === "GET")
-      return NextResponse.json({ score: 1.5 }, { status: 200 });
+
 
     // Handle STEDI API inconsistency on customer creation
     if (
@@ -194,30 +170,7 @@ export async function forwardRequest(request: Request, path: string) {
     });
   }
 
-  // Force response format for specific endpoints if STEDI returns 200 but maybe formatted differently
-  if (upstreamRes.ok) {
-    if (path === "/login" && request.method === "POST") {
-      // Ensure we return text for login instead of JSON, in case STEDI started returning JSON
-      responseHeaders.set("content-type", "text/plain");
-      return new Response(rawText, { status: 200, headers: responseHeaders });
-    }
-    if (path === "/rapidsteptest" && request.method === "POST") {
-      responseHeaders.set("content-type", "text/plain");
-      return new Response("Saved", { status: 200, headers: responseHeaders });
-    }
-    if (path.startsWith("/riskscore/") && request.method === "GET") {
-      try {
-        const p = JSON.parse(rawText);
-        if (typeof p.score === "number" && p.score > 0) {
-          return NextResponse.json(p, {
-            status: 200,
-            headers: responseHeaders,
-          });
-        }
-      } catch (e) {}
-      return NextResponse.json({ score: 1.5 }, { status: 200 });
-    }
-  }
+
 
   if (resContentType && resContentType.includes("application/json")) {
     try {

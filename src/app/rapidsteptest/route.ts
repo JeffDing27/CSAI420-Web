@@ -48,7 +48,8 @@ export async function POST(request: Request) {
 
     const service = new RapidStepTestService();
     await service.submitTest({
-      userId: activeAssignment.userId,
+      userId: activeAssignment.userId || null,
+      profileId: activeAssignment.profileId || null,
       deviceRecordId: device.id,
       source: TestSource.DEVICE,
       externalTestId,

@@ -25,6 +25,7 @@ function newSession(callSid: string): VoiceSession {
     callSid,
     stage: VoiceStage.INITIAL,
     userId: null,
+    profileId: null,
     patientName: null,
     patientEmail: null,
     phoneNumber: null,
@@ -234,6 +235,7 @@ export class VoiceService {
         source: TestSource.IVR,
         completedAt,
         deviceRecordId: null,
+        profileId: null,
       });
       score = await this.riskScoreService.calculateRiskScore(
         session.patientEmail,

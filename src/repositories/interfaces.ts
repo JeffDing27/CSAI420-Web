@@ -89,6 +89,7 @@ export interface ClinicianAccessRequestRepository {
 export interface RapidStepTestRepository {
   findById(id: string): Promise<RapidStepTest | null>;
   findByUserId(userId: string): Promise<RapidStepTest[]>;
+  findByProfileId(profileId: string): Promise<RapidStepTest[]>;
   create(test: RapidStepTestWrite): Promise<RapidStepTest>;
 }
 

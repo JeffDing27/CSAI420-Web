@@ -42,12 +42,12 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  authSessions   AuthSession[]
-  customerRefs   CustomerReference[]
-  rapidStepTests RapidStepTest[]
-  escalations    Escalation[]
-  pushTokens     PushToken[]
-  auditEvents    AuditEvent[]
+  authSessions      AuthSession[]
+  customerRefs      CustomerReference[]
+  rapidStepTests    RapidStepTest[]
+  escalations       Escalation[]
+  pushTokens        PushToken[]
+  auditEvents       AuditEvent[]
   deviceAssignments DeviceAssignment[]
   voiceSessions     VoiceSession[]
 }
@@ -70,12 +70,16 @@ model CustomerReference {
   phone              String   @unique
   email              String   @unique
   userId             String?
+  profileId          String?
   externalCustomerId String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
   user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  profile       Profile?       @relation(fields: [profileId], references: [id], onDelete: SetNull)
   voiceSessions VoiceSession[]
+
+  @@index([profileId])
 }
 
 model Consent {
@@ -117,7 +121,8 @@ enum TestSource {
 
 model RapidStepTest {
   id             String     @id @default(uuid())
-  userId         String
+  userId         String?
+  profileId      String?
   externalTestId String?
   testData       Json
   source         TestSource
@@ -125,8 +130,11 @@ model RapidStepTest {
   completedAt    DateTime?
   deviceRecordId String?
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  device Device? @relation(fields: [deviceRecordId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  device  Device?  @relation(fields: [deviceRecordId], references: [id])
+
+  @@index([profileId])
 }
 
 enum ResponsePreference {
@@ -262,6 +270,7 @@ model VoiceSession {
   callSid                String     @unique
   stage                  VoiceStage
   userId                 String?
+  profileId              String?
   patientName            String?
   patientEmail           String?
   phoneNumber            String?
@@ -284,8 +293,10 @@ model VoiceSession {
 
   customerReference CustomerReference? @relation(fields: [customerReferenceId], references: [id], onDelete: SetNull)
   user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  profile           Profile?           @relation(fields: [profileId], references: [id], onDelete: SetNull)
 
   @@index([userId, updatedAt])
+  @@index([profileId])
 }
 
 model VoiceTest {
@@ -364,13 +375,17 @@ model RagChunk {
 model AuditEvent {
   id           String   @id @default(uuid())
   userId       String?
+  profileId    String?
   eventType    String
   entityType   String
   entityId     String
   safeMetadata Json
   createdAt    DateTime @default(now())
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  profile Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  @@index([profileId])
 }
 
 model Device {
@@ -389,14 +404,37 @@ model Device {
 model DeviceAssignment {
   id             String                 @id @default(uuid())
   deviceRecordId String
-  userId         String
+  userId         String?
+  profileId      String?
   method         DeviceAssignmentMethod
   assignedAt     DateTime               @default(now())
   unassignedAt   DateTime?
 
-  device         Device                 @relation(fields: [deviceRecordId], references: [id])
-  user           User                   @relation(fields: [userId], references: [id])
+  device  Device   @relation(fields: [deviceRecordId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id])
+  profile Profile? @relation(fields: [profileId], references: [id])
 
   @@index([deviceRecordId])
   @@index([userId])
+  @@index([profileId])
+}
+
+enum ProfileRole {
+  PATIENT
+  CLINICIAN
+  ADMIN
+}
+
+model Profile {
+  id            String      @id @default(uuid())
+  externalEmail String      @unique
+  role          ProfileRole @default(PATIENT)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  deviceAssignments DeviceAssignment[]
+  rapidStepTests    RapidStepTest[]
+  voiceSessions     VoiceSession[]
+  customerRefs      CustomerReference[]
+  auditEvents       AuditEvent[]
 }
