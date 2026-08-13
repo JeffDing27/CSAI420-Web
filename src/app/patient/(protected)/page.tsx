@@ -19,36 +19,37 @@ function calculateAge(birthDate: string) {
   return age;
 }
 
-// NEW: fallback fetch from local pass-through API
-async function getBirthDateFromLocalUserApi(email?: string | null): Promise<string | null> {
+type RemoteUserProfile = {
+  birthDate?: string;
+  phone?: string;
+};
+
+async function getRemoteUserProfile(email?: string | null): Promise<RemoteUserProfile | null> {
   if (!email) return null;
 
   try {
     const cookieStore = await cookies();
     const surestepsToken = cookieStore.get("suresteps.session.token")?.value;
+    if (!surestepsToken) return null;
 
     const baseUrl = process.env.INTERNAL_API_BASE_URL || "http://localhost:3000";
     const response = await fetch(`${baseUrl}/user/${encodeURIComponent(email)}`, {
       method: "GET",
       headers: {
         accept: "application/json",
-        ...(surestepsToken ? { "suresteps.session.token": surestepsToken } : {}),
+        "suresteps.session.token": surestepsToken,
       },
       cache: "no-store",
     });
 
     if (!response.ok) return null;
 
-    const data = (await response.json()) as { birthDate?: string };
-    return typeof data.birthDate === "string" ? data.birthDate : null;
+    const data = (await response.json()) as RemoteUserProfile;
+    return data;
   } catch {
     return null;
   }
 }
-
-// Example usage:
-// const customerName = await getCustomerNameFromLocalCustomerApi(user.phone);
-// const nameToShow = customerName || `${user.firstName} ${user.lastName}`;
 
 async function getCustomerNameFromLocalCustomerApi(phone?: string | null): Promise<string | null> {
   if (!phone) return null;
@@ -58,22 +59,20 @@ async function getCustomerNameFromLocalCustomerApi(phone?: string | null): Promi
     const surestepsToken = cookieStore.get("suresteps.session.token")?.value;
     if (!surestepsToken) return null;
 
-    const response = await fetch(
-      `http://localhost:3000/customer/${encodeURIComponent(phone)}`,
-      {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-          "suresteps.session.token": surestepsToken,
-        },
-        cache: "no-store",
+    const baseUrl = process.env.INTERNAL_API_BASE_URL || "http://localhost:3000";
+    const response = await fetch(`${baseUrl}/customer/${encodeURIComponent(phone)}`, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "suresteps.session.token": surestepsToken,
       },
-    );
+      cache: "no-store",
+    });
 
     if (!response.ok) return null;
 
     const data = (await response.json()) as { customerName?: string };
-    return data.customerName ?? null;
+    return data.customerName?.trim() || null;
   } catch {
     return null;
   }
@@ -83,20 +82,24 @@ export default async function PatientPortalHomePage() {
   const { user, stediMode } = await getPatientPortalUser();
   const hasLocalUser = Boolean(user.id);
 
-  const [tests, assignments] = hasLocalUser
-    ? await Promise.all([
-        prisma.rapidStepTest.findMany({
+  const [tests, assignments, remoteUser] = await Promise.all([
+    hasLocalUser
+      ? prisma.rapidStepTest.findMany({
           where: { userId: user.id },
           orderBy: { completedAt: "desc" },
           take: 5,
-        }),
-        DeviceService.getActiveAssignmentsForUser(user.id!),
-      ])
-    : [[], []];
+        })
+      : Promise.resolve([]),
+    hasLocalUser
+      ? DeviceService.getActiveAssignmentsForUser(user.id!)
+      : Promise.resolve([]),
+    getRemoteUserProfile(user.email),
+  ]);
 
-  // NEW: use API birthDate when local user.birthDate is missing
-  const apiBirthDate = !user.birthDate ? await getBirthDateFromLocalUserApi(user.email) : null;
-  const birthDateForAge = user.birthDate || apiBirthDate || "";
+  const birthDateForAge = user.birthDate || remoteUser?.birthDate || "";
+  const phoneForCustomerLookup = user.phone || remoteUser?.phone || null;
+  const customerName = await getCustomerNameFromLocalCustomerApi(phoneForCustomerLookup);
+  const displayName = customerName || `${user.firstName} ${user.lastName}`.trim();
 
   const latestTest = tests[0];
 
@@ -117,7 +120,7 @@ export default async function PatientPortalHomePage() {
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <PatientInformationCard
-          name={`${user.firstName} ${user.lastName}`}
+          name={displayName}
           age={calculateAge(birthDateForAge)}
           email={user.email}
           assessmentDate={latestTest?.completedAt ? new Date(latestTest.completedAt).toLocaleDateString() : "No assessment yet"}
