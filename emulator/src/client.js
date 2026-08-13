@@ -75,6 +75,7 @@ export async function sendRapidStepTest(state, options = {}) {
   const payload = buildRapidStepPayload(
     {
       deviceId: state.deviceId,
+      customer: state.customer,
     },
     {
       now: options.now ?? Date.now(),
@@ -86,7 +87,10 @@ export async function sendRapidStepTest(state, options = {}) {
     resolveUrl(state.targetBaseUrl, "/rapidsteptest", options),
     {
       method: "POST",
-      headers: buildHeaders(state),
+      headers: {
+        "content-type": "application/json",
+        "suresteps.session.token": state.sessionToken,
+      },
       body: JSON.stringify(payload),
     },
   );

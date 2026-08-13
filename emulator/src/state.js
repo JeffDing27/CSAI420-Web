@@ -19,6 +19,8 @@ export function createDefaultState() {
   return {
     deviceId: null,
     deviceToken: null,
+    customer: null,
+    sessionToken: null,
     targetBaseUrl: getDefaultTargetBaseUrl(),
     powerState: "off",
     heartbeatIntervalMs: DEFAULT_HEARTBEAT_INTERVAL_MS,

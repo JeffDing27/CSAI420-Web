@@ -10,6 +10,8 @@ import {
 const ALLOWED_CONFIG_KEYS = new Set([
   "deviceId",
   "deviceToken",
+  "customer",
+  "sessionToken",
   "targetBaseUrl",
   "heartbeatIntervalMs",
 ]);
@@ -137,6 +139,8 @@ export function createDaemon(options = {}) {
 
     status.deviceTokenConfigured = !!status.deviceToken;
     delete status.deviceToken;
+    status.sessionTokenConfigured = !!status.sessionToken;
+    delete status.sessionToken;
 
     return status;
   }

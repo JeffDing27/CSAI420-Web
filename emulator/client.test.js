@@ -59,7 +59,7 @@ describe("emulator client", () => {
     expect(result.body).toBe("Saved");
   });
 
-  it("posts randomized rapid-step payloads to /rapidsteptest", async () => {
+  it("posts randomized rapid-step payloads to /rapidsteptest with sessionToken instead of deviceToken", async () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValue(new Response("Saved", { status: 200 }));
@@ -67,7 +67,8 @@ describe("emulator client", () => {
     const result = await sendRapidStepTest(
       {
         deviceId: "007",
-        deviceToken: "token-123",
+        customer: "test@example.com",
+        sessionToken: "session-123",
         targetBaseUrl: "https://stedi-voice.vercel.app",
       },
       {
@@ -80,11 +81,12 @@ describe("emulator client", () => {
     expect(fetchImpl).toHaveBeenCalledOnce();
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe("https://stedi-voice.vercel.app/rapidsteptest");
-    expect(init.headers["x-stedi-device-id"]).toBe("007");
-    expect(init.headers["x-stedi-device-token"]).toBe("token-123");
-    expect(init.headers["suresteps.session.token"]).toBeUndefined();
+    expect(init.headers["x-stedi-device-id"]).toBeUndefined();
+    expect(init.headers["x-stedi-device-token"]).toBeUndefined();
+    expect(init.headers["suresteps.session.token"]).toBe("session-123");
     const payload = JSON.parse(init.body);
     expect(payload.deviceId).toBe("007");
+    expect(payload.customer).toBe("test@example.com");
     expect(payload.testTime).toBe(payload.stopTime - payload.startTime);
     expect(payload.totalSteps).toBe(payload.stepPoints.length);
     expect(result.status).toBe(200);

@@ -78,14 +78,16 @@ describe("CLI execution", () => {
       output: capture.output,
       readStateFn: async () => ({
         deviceId: null,
-        deviceToken: null,
+        customer: null,
+        sessionToken: null,
       }),
     });
 
     expect(exitCode).toBe(1);
     const { stderr } = capture.read();
     expect(stderr).toContain("deviceId");
-    expect(stderr).toContain("deviceToken");
+    expect(stderr).toContain("customer");
+    expect(stderr).toContain("sessionToken");
   });
 
   it("succeeds when send-steps returns a 2xx response", async () => {
@@ -99,7 +101,8 @@ describe("CLI execution", () => {
       output: capture.output,
       readStateFn: async () => ({
         deviceId: "007",
-        deviceToken: "token-123",
+        customer: "test@example.com",
+        sessionToken: "session-123",
         targetBaseUrl: "https://stedi-voice.vercel.app",
       }),
       sendRapidStepTestFn,
@@ -123,7 +126,8 @@ describe("CLI execution", () => {
       output: capture.output,
       readStateFn: async () => ({
         deviceId: "007",
-        deviceToken: "token-123",
+        customer: "test@example.com",
+        sessionToken: "session-123",
         targetBaseUrl: "https://stedi-voice.vercel.app",
       }),
       sendRapidStepTestFn,
@@ -141,8 +145,9 @@ describe("CLI config validation", () => {
     expect(
       findMissingStepConfig({
         deviceId: "007",
-        deviceToken: null,
+        customer: null,
+        sessionToken: null,
       }),
-    ).toEqual(["deviceToken"]);
+    ).toEqual(["customer", "sessionToken"]);
   });
 });

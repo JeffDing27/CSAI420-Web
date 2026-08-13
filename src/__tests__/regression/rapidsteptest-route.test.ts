@@ -47,6 +47,17 @@ describe('rapidsteptest route', () => {
     expect(forwardRequest).toHaveBeenCalled();
   });
 
+  it('legacy request with suresteps.session.token and without x-stedi device headers calls forwardRequest', async () => {
+    (forwardRequest as any).mockResolvedValue(new Response('legacy ok', { status: 200 }));
+    const req = createRequest({
+      'suresteps.session.token': 'test-session-token',
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('legacy ok');
+    expect(forwardRequest).toHaveBeenCalled();
+  });
+
   it('authenticated assigned device stores under assignment.userId', async () => {
     (DeviceService.authenticateDevice as any).mockResolvedValue({
       id: 'd1', deviceId: 'DEV-1', status: DeviceStatus.ASSIGNED

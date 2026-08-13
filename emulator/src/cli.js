@@ -7,6 +7,8 @@ import { readState } from "./state.js";
 const HELP_TEXT = `Usage:
   stedi-sim set-device-id <deviceId>
   stedi-sim set device-token <token>
+  stedi-sim set customer <customer-email>
+  stedi-sim set session-token <token>
   stedi-sim set target-base-url <url>
   stedi-sim provision <deviceId>
   stedi-sim on
@@ -24,6 +26,10 @@ function mapSetField(field) {
   switch (field) {
     case "device-token":
       return "deviceToken";
+    case "customer":
+      return "customer";
+    case "session-token":
+      return "sessionToken";
     case "target-base-url":
       return "targetBaseUrl";
     default:
@@ -80,7 +86,7 @@ export function parseCommand(argv) {
   throw new Error(`Unknown command: ${command}`);
 }
 
-export function findMissingStepConfig(state) {
+export function findMissingHeartbeatConfig(state) {
   const missing = [];
 
   if (!state.deviceId) {
@@ -88,6 +94,22 @@ export function findMissingStepConfig(state) {
   }
   if (!state.deviceToken) {
     missing.push("deviceToken");
+  }
+
+  return missing;
+}
+
+export function findMissingStepConfig(state) {
+  const missing = [];
+
+  if (!state.deviceId) {
+    missing.push("deviceId");
+  }
+  if (!state.customer) {
+    missing.push("customer");
+  }
+  if (!state.sessionToken) {
+    missing.push("sessionToken");
   }
 
   return missing;
@@ -140,6 +162,8 @@ export async function runCli(argv, dependencies = {}) {
     });
     if (command.key === "deviceToken") {
       output.stdout.write(`deviceToken=configured\n`);
+    } else if (command.key === "sessionToken") {
+      output.stdout.write(`sessionToken=configured\n`);
     } else {
       output.stdout.write(`${command.key}=${state[command.key]}\n`);
     }
@@ -184,6 +208,16 @@ export async function runCli(argv, dependencies = {}) {
   }
 
   if (command.type === "power") {
+    if (command.state === "on") {
+      const state = await readStateFn();
+      const missing = findMissingHeartbeatConfig(state);
+      if (missing.length > 0) {
+        output.stderr.write(
+          `Missing required heartbeat configuration: ${missing.join(", ")}\n`,
+        );
+        return 1;
+      }
+    }
     const state = await callControl(fetchImpl, "/power", {
       body: JSON.stringify({ state: command.state }),
       method: "POST",
