@@ -46,6 +46,39 @@ async function getBirthDateFromLocalUserApi(email?: string | null): Promise<stri
   }
 }
 
+// Example usage:
+// const customerName = await getCustomerNameFromLocalCustomerApi(user.phone);
+// const nameToShow = customerName || `${user.firstName} ${user.lastName}`;
+
+async function getCustomerNameFromLocalCustomerApi(phone?: string | null): Promise<string | null> {
+  if (!phone) return null;
+
+  try {
+    const cookieStore = await cookies();
+    const surestepsToken = cookieStore.get("suresteps.session.token")?.value;
+    if (!surestepsToken) return null;
+
+    const response = await fetch(
+      `http://localhost:3000/customer/${encodeURIComponent(phone)}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          "suresteps.session.token": surestepsToken,
+        },
+        cache: "no-store",
+      },
+    );
+
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as { customerName?: string };
+    return data.customerName ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function PatientPortalHomePage() {
   const { user, stediMode } = await getPatientPortalUser();
   const hasLocalUser = Boolean(user.id);
