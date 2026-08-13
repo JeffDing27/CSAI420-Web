@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { RepositoryFactory } from "@/repositories/provider-factory";
 
 export async function POST(request: Request) {
@@ -15,11 +16,18 @@ export async function POST(request: Request) {
     // In a real app we might generate embeddings here with OpenAI if enabled,
     // but the repository can handle that or we just store them if not enabled.
 
+    const checksum = crypto
+      .createHash("sha256")
+      .update(JSON.stringify({ title, source, section, metadata, chunks }))
+      .digest("hex");
+
     const document = await ragRepo.createDocument({
       title,
       source,
       section: section || null,
       metadata: metadata || {},
+      checksum,
+      createdAt: new Date(),
       updatedAt: new Date(),
     });
 

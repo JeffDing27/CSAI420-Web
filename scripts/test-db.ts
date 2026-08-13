@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { Pool } from "pg";
 
-config({ path: ".env.local" });
+config({ path: ".env.local", override: true });
 
 async function testConnection(
   name: string,

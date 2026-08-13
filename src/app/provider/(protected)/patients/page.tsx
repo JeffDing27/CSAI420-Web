@@ -45,42 +45,42 @@ export default async function ProviderPatientsPage({
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">My Patients</h1>
-          <p className="mt-2 text-sm text-gray-700">
+          <h1 className="app-title">My Patients</h1>
+          <p className="app-subtitle mt-2">
             A list of all patients who have granted you access to their STEDI records.
           </p>
         </div>
       </div>
 
-      <div className="mt-6 flex gap-4">
+      <div className="app-panel p-4 md:p-5 flex gap-4">
         <form className="flex-1 max-w-sm flex">
           <input
             type="text"
             name="query"
             placeholder="Search patients..."
             defaultValue={query}
-            className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border"
+            className="app-input mt-0"
           />
-          <button type="submit" className="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
+          <button type="submit" className="ml-3 app-button-primary">
             Search
           </button>
         </form>
       </div>
 
-      <div className="mt-8 flex flex-col">
+      <div className="flex flex-col app-panel p-2 md:p-3">
         <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+            <div className="overflow-hidden rounded-2xl border border-slate-200">
               <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
+                <thead className="bg-slate-50">
                   <tr>
-                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Name</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Email</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Phone</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">DOB</th>
+                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-extrabold text-slate-800 sm:pl-6">Name</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-extrabold text-slate-800">Email</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-extrabold text-slate-800">Phone</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-extrabold text-slate-800">DOB</th>
                     <th className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                       <span className="sr-only">View</span>
                     </th>
@@ -89,14 +89,14 @@ export default async function ProviderPatientsPage({
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {patients.length > 0 ? patients.map((patient) => (
                     <tr key={patient.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-bold text-slate-900 sm:pl-6">
                         {patient.firstName} {patient.lastName}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{patient.email}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{patient.phone}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{patient.birthDate}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-slate-600">{patient.email}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-slate-600">{patient.phone}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-slate-600">{patient.birthDate}</td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                        <Link href={`/provider/patients/${patient.id}`} className="text-blue-600 hover:text-blue-900">
+                        <Link href={`/provider/patients/${patient.id}`} className="rounded-xl bg-sky-100 px-3 py-1.5 font-bold text-sky-800 hover:bg-sky-200">
                           View profile<span className="sr-only">, {patient.firstName}</span>
                         </Link>
                       </td>

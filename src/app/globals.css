@@ -1,26 +1,57 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f7fb;
+  --foreground: #122033;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-nunito-sans);
+  --font-mono: var(--font-space-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #f5f7fb;
+    --foreground: #122033;
   }
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1200px 700px at -10% -10%, #dff2ff 0%, transparent 50%),
+    radial-gradient(900px 600px at 110% 0%, #ffe9cf 0%, transparent 45%),
+    linear-gradient(180deg, #f7f9fd 0%, #eef3f9 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-nunito-sans), "Segoe UI", sans-serif;
+}
+
+.app-shell {
+  @apply min-h-screen;
+}
+
+.app-panel {
+  @apply rounded-3xl border border-slate-200/80 bg-white/90 shadow-sm backdrop-blur;
+}
+
+.app-title {
+  @apply text-3xl font-extrabold tracking-tight text-slate-900;
+}
+
+.app-subtitle {
+  @apply text-base text-slate-600;
+}
+
+.app-input {
+  @apply mt-1 w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100;
+}
+
+.app-button-primary {
+  @apply inline-flex items-center justify-center rounded-2xl bg-sky-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sky-700 disabled:bg-slate-300;
+}
+
+.app-button-secondary {
+  @apply inline-flex items-center justify-center rounded-2xl bg-slate-100 px-5 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-200;
 }

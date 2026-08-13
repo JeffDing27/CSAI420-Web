@@ -8,8 +8,15 @@ export type CreateAuthSessionParams = Omit<
 >;
 
 export class AuthSessionRepository {
+  private static getProvider(): "kv" | "supabase" | "dual" {
+    if (process.env.USE_LOCAL_USER_STORE === "true") {
+      return "kv";
+    }
+    return (process.env.STORAGE_PROVIDER as "kv" | "supabase" | "dual") || "kv";
+  }
+
   static async create(data: CreateAuthSessionParams): Promise<AuthSession> {
-    const provider = process.env.STORAGE_PROVIDER || "kv";
+    const provider = AuthSessionRepository.getProvider();
     let createdSession: AuthSession | null = null;
 
     if (provider === "supabase" || provider === "dual") {
@@ -36,7 +43,7 @@ export class AuthSessionRepository {
   }
 
   static async findByTokenHash(tokenHash: string): Promise<AuthSession | null> {
-    const provider = process.env.STORAGE_PROVIDER || "kv";
+    const provider = AuthSessionRepository.getProvider();
 
     if (provider === "supabase" || provider === "dual") {
       const session = await prisma.authSession.findUnique({
@@ -54,7 +61,7 @@ export class AuthSessionRepository {
   }
 
   static async revoke(tokenHash: string): Promise<void> {
-    const provider = process.env.STORAGE_PROVIDER || "kv";
+    const provider = AuthSessionRepository.getProvider();
 
     if (provider === "supabase" || provider === "dual") {
       await prisma.authSession.update({

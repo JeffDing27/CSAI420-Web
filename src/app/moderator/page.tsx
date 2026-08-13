@@ -109,42 +109,42 @@ export default function ModeratorPage() {
   };
 
   if (loading)
-    return <div className="text-center mt-10">Loading escalations...</div>;
+    return <div className="text-center mt-10 text-lg font-semibold text-slate-600">Loading escalations...</div>;
   if (error)
-    return <div className="text-center mt-10 text-red-500">{error}</div>;
+    return <div className="text-center mt-10 text-rose-600 font-semibold">{error}</div>;
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">
+    <div className="app-panel p-6 md:p-8">
+      <h2 className="text-3xl font-extrabold mb-6 text-slate-900">
         Active Escalations
       </h2>
 
       {escalations.length === 0 ? (
-        <p className="text-gray-500">No active escalations.</p>
+        <p className="text-slate-500">No active escalations.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-slate-200 rounded-2xl overflow-hidden">
+            <thead className="bg-slate-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Time
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Priority
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Category
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Question
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Contact
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -152,38 +152,38 @@ export default function ModeratorPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {escalations.map((esc) => (
                 <tr key={esc.escalationId}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                     {new Date(esc.escalationTimestamp).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      className={`px-2.5 inline-flex text-xs leading-5 font-bold rounded-full ${
                         esc.priority === "high"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-green-100 text-green-800"
+                          ? "bg-rose-100 text-rose-800"
+                          : "bg-emerald-100 text-emerald-800"
                       }`}
                     >
                       {esc.priority}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 capitalize">
                     {esc.category}
                   </td>
                   <td
-                    className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate"
+                    className="px-6 py-4 text-sm text-slate-900 max-w-xs truncate"
                     title={esc.question}
                   >
                     {esc.question}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                     {esc.phoneNumber} ({esc.responsePreference})
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 capitalize">
                     {esc.status}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
                     <select
-                      className="border rounded p-1 text-sm text-gray-700"
+                      className="border border-slate-300 rounded-xl p-1.5 text-sm text-slate-700 bg-white"
                       value={esc.status}
                       onChange={(e) =>
                         handleStatusChange(esc.escalationId, e.target.value)
@@ -195,7 +195,7 @@ export default function ModeratorPage() {
                     </select>
 
                     <select
-                      className="border rounded p-1 text-sm text-gray-700"
+                      className="border border-slate-300 rounded-xl p-1.5 text-sm text-slate-700 bg-white"
                       value={esc.coachId || ""}
                       onChange={(e) =>
                         handleAssignCoach(esc.escalationId, e.target.value)
@@ -212,7 +212,7 @@ export default function ModeratorPage() {
                     </select>
 
                     <button
-                      className="bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                      className="bg-sky-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold"
                       onClick={() =>
                         handleSendResponse(
                           esc.escalationId,

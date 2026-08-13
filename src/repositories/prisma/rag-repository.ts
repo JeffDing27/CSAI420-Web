@@ -3,6 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { normalizeJson } from "@/utils/json-normalize";
 
 export class RagRepository {
+  async findDocuments(): Promise<RagDocument[]> {
+    return prisma.ragDocument.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async findChunks(_embedding: any, limit: number): Promise<RagChunk[]> {
+    return prisma.ragChunk.findMany({
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   async findDocumentById(id: string): Promise<RagDocument | null> {
     return prisma.ragDocument.findUnique({
       where: { id },

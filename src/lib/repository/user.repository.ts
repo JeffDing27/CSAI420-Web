@@ -1,4 +1,4 @@
-import type { User } from "@prisma/client";
+import { Role, type User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { kvGet, kvSet } from "@/utils/kv-store";
 
@@ -8,8 +8,15 @@ export type CreateUserParams = Omit<
 >;
 
 export class UserRepository {
+  private static getProvider(): "kv" | "supabase" | "dual" {
+    if (process.env.USE_LOCAL_USER_STORE === "true") {
+      return "kv";
+    }
+    return (process.env.STORAGE_PROVIDER as "kv" | "supabase" | "dual") || "kv";
+  }
+
   static async findByEmail(email: string): Promise<User | null> {
-    const provider = process.env.STORAGE_PROVIDER || "kv";
+    const provider = UserRepository.getProvider();
 
     if (provider === "supabase" || provider === "dual") {
       try {
@@ -38,6 +45,7 @@ export class UserRepository {
           passwordHash: kvUser.passwordHash,
           passwordSalt: kvUser.passwordSalt,
           externalUserId: null,
+          role: kvUser.role || Role.PATIENT,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -48,7 +56,7 @@ export class UserRepository {
   }
 
   static async findByPhone(phone: string): Promise<User | null> {
-    const provider = process.env.STORAGE_PROVIDER || "kv";
+    const provider = UserRepository.getProvider();
 
     if (provider === "supabase" || provider === "dual") {
       const user = await prisma.user.findUnique({ where: { phone } });
@@ -64,7 +72,7 @@ export class UserRepository {
   }
 
   static async findByUserName(userName: string): Promise<User | null> {
-    const provider = process.env.STORAGE_PROVIDER || "kv";
+    const provider = UserRepository.getProvider();
 
     if (provider === "supabase" || provider === "dual") {
       const user = await prisma.user.findUnique({ where: { userName } });
@@ -74,7 +82,7 @@ export class UserRepository {
   }
 
   static async create(data: CreateUserParams): Promise<User> {
-    const provider = process.env.STORAGE_PROVIDER || "kv";
+    const provider = UserRepository.getProvider();
     let createdUser: User | null = null;
 
     if (provider === "supabase" || provider === "dual") {

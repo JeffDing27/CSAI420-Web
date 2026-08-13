@@ -8,8 +8,15 @@ export type CreateCustomerRefParams = Omit<
 >;
 
 export class CustomerReferenceRepository {
+  private static getProvider(): "kv" | "supabase" | "dual" {
+    if (process.env.USE_LOCAL_USER_STORE === "true") {
+      return "kv";
+    }
+    return (process.env.STORAGE_PROVIDER as "kv" | "supabase" | "dual") || "kv";
+  }
+
   static async findByPhone(phone: string): Promise<CustomerReference | null> {
-    const provider = process.env.STORAGE_PROVIDER || "kv";
+    const provider = CustomerReferenceRepository.getProvider();
 
     if (provider === "supabase" || provider === "dual") {
       const cust = await prisma.customerReference.findUnique({
@@ -30,7 +37,7 @@ export class CustomerReferenceRepository {
   }
 
   static async findByEmail(email: string): Promise<CustomerReference | null> {
-    const provider = process.env.STORAGE_PROVIDER || "kv";
+    const provider = CustomerReferenceRepository.getProvider();
 
     if (provider === "supabase" || provider === "dual") {
       const cust = await prisma.customerReference.findUnique({
@@ -52,7 +59,7 @@ export class CustomerReferenceRepository {
   static async upsert(
     data: CreateCustomerRefParams,
   ): Promise<CustomerReference> {
-    const provider = process.env.STORAGE_PROVIDER || "kv";
+    const provider = CustomerReferenceRepository.getProvider();
     let upserted: CustomerReference | null = null;
 
     if (provider === "supabase" || provider === "dual") {

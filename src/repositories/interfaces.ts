@@ -136,7 +136,9 @@ export interface SmsRepository {
 export interface RagRepository {
   findDocuments(): Promise<RagDocument[]>;
   findChunks(embedding: any, limit: number): Promise<RagChunk[]>;
-  // For mocks, we just provide an interface. Proper implementation will use pgvector.
+  createDocument(doc: Omit<RagDocument, "id">): Promise<RagDocument>;
+  addChunks(chunks: Omit<RagChunk, "id" | "createdAt">[]): Promise<void>;
+  similaritySearch(queryEmbedding: any, limit?: number): Promise<RagChunk[]>;
 }
 
 export interface OutboxRepository {

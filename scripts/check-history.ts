@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import { Pool } from "pg";
 
-config({ path: ".env.local" });
+config({ path: ".env.local", override: true });
 
 async function verify() {
   const pool = new Pool({ connectionString: process.env.DIRECT_URL });

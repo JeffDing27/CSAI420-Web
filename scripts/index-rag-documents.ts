@@ -3,7 +3,7 @@ import crypto from "crypto";
 
 async function indexDocuments() {
   console.log("Seeding RAG documents...");
-  const ragRepo = RepositoryFactory.getRagRepository();
+  const ragRepo = RepositoryFactory.getRagRepository() as any;
 
   const documents = [
     {
@@ -36,7 +36,7 @@ async function indexDocuments() {
     const checksum = crypto.createHash('sha256').update(doc.content).digest('hex');
     
     // Check if it already exists (simplified)
-    const existing = await (ragRepo as any).similaritySearch(null, 1); // Mock check
+    const existing = await ragRepo.similaritySearch(null, 1); // Mock check
     
     const createdDoc = await ragRepo.createDocument({
       title: doc.title,

@@ -1,6 +1,6 @@
 import { config } from "dotenv";
 
-config({ path: ".env.local" });
+config({ path: ".env.local", override: true });
 
 const dbUrl = process.env.DATABASE_URL || "";
 const directUrl = process.env.DIRECT_URL || "";

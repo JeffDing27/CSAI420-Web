@@ -33,10 +33,10 @@ export default async function PatientProfilePage({
 
   if (!hasAccess) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-xl font-semibold text-red-600">Access Denied</h2>
-        <p className="mt-2 text-gray-600">You do not have permission to view this patient's records.</p>
-        <Link href="/provider/patients" className="mt-4 text-blue-600 hover:underline inline-block">Return to Patients List</Link>
+      <div className="app-panel text-center py-12 px-6">
+        <h2 className="text-2xl font-extrabold text-rose-600">Access Denied</h2>
+        <p className="mt-2 text-slate-600">You do not have permission to view this patient's records.</p>
+        <Link href="/provider/patients" className="mt-5 inline-flex rounded-2xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200">Return to Patients List</Link>
       </div>
     );
   }
@@ -52,17 +52,17 @@ export default async function PatientProfilePage({
   });
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="mb-6">
-        <Link href="/provider/patients" className="text-sm text-blue-600 hover:underline">
+        <Link href="/provider/patients" className="text-sm font-bold text-sky-700 hover:text-sky-900">
           &larr; Back to Patients
         </Link>
       </div>
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
+      <div className="app-panel overflow-hidden mb-8">
         <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">Patient Profile</h3>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">Personal details and contact information.</p>
+          <h3 className="text-xl leading-6 font-extrabold text-slate-900">Patient Profile</h3>
+          <p className="mt-1 max-w-2xl text-sm text-slate-500">Personal details and contact information.</p>
         </div>
         <div className="border-t border-gray-200 px-4 py-5 sm:p-0">
           <dl className="sm:divide-y sm:divide-gray-200">
@@ -86,8 +86,8 @@ export default async function PatientProfilePage({
         </div>
       </div>
 
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Rapid Step Tests</h3>
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
+      <h3 className="text-xl font-extrabold text-slate-900 mb-4">Rapid Step Tests</h3>
+      <div className="app-panel overflow-hidden mb-8">
         <ul className="divide-y divide-gray-200">
           {tests.length > 0 ? tests.map(test => (
             <li key={test.id} className="px-4 py-4 sm:px-6">
@@ -96,7 +96,7 @@ export default async function PatientProfilePage({
                   Score: {(test.testData as any)?.score || "N/A"}
                 </p>
                 <div className="ml-2 flex-shrink-0 flex">
-                  <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    <p className="px-2.5 inline-flex text-xs leading-5 font-bold rounded-full bg-emerald-100 text-emerald-800">
                     Source: {test.source}
                   </p>
                 </div>
@@ -109,7 +109,13 @@ export default async function PatientProfilePage({
                 </div>
                 <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
                   <p>
-                    Completed on <time dateTime={test.completedAt.toISOString()}>{new Date(test.completedAt).toLocaleDateString()}</time>
+                    Completed on {test.completedAt ? (
+                      <time dateTime={test.completedAt.toISOString()}>
+                        {new Date(test.completedAt).toLocaleDateString()}
+                      </time>
+                    ) : (
+                      "N/A"
+                    )}
                   </p>
                 </div>
               </div>
@@ -120,8 +126,8 @@ export default async function PatientProfilePage({
         </ul>
       </div>
 
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Escalations</h3>
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+      <h3 className="text-xl font-extrabold text-slate-900 mb-4">Escalations</h3>
+      <div className="app-panel overflow-hidden">
         <ul className="divide-y divide-gray-200">
           {escalations.length > 0 ? escalations.map(esc => (
             <li key={esc.escalationId} className="px-4 py-4 sm:px-6">
@@ -130,7 +136,7 @@ export default async function PatientProfilePage({
                   {esc.category}
                 </p>
                 <div className="ml-2 flex-shrink-0 flex">
-                  <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${esc.status === 'RESOLVED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                  <p className={`px-2.5 inline-flex text-xs leading-5 font-bold rounded-full ${esc.status === 'RESOLVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
                     {esc.status}
                   </p>
                 </div>

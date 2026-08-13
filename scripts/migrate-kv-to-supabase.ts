@@ -1,7 +1,7 @@
 // Dry-run migration script from KV to Supabase
 
 import { config } from "dotenv";
-config({ path: ".env.local" });
+config({ path: ".env.local", override: true });
 
 import { randomUUID } from "node:crypto";
 import { kvGet } from "../src/utils/kv-store";

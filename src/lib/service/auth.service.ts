@@ -1,4 +1,4 @@
-import type { AuthSession, User } from "@prisma/client";
+import { Role, type AuthSession, type User } from "@prisma/client";
 import crypto from "crypto";
 import { AuthSessionRepository } from "../repository/auth-session.repository";
 import { CustomerReferenceRepository } from "../repository/customer-reference.repository";
@@ -49,6 +49,7 @@ export class AuthService {
       passwordSalt: salt,
       firstName: payload.firstName || "",
       lastName: payload.lastName || "",
+      role: Role.PATIENT,
     });
 
     // Create CustomerReference
@@ -137,5 +138,25 @@ export class AuthService {
       .update(rawToken)
       .digest("hex");
     await AuthSessionRepository.revoke(tokenHash);
+  }
+
+  static async createSession(userId: string): Promise<string> {
+    const rawToken = crypto.randomUUID();
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(rawToken)
+      .digest("hex");
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    await AuthSessionRepository.create({
+      userId,
+      tokenHash,
+      expiresAt,
+      revokedAt: null,
+    });
+
+    return rawToken;
   }
 }

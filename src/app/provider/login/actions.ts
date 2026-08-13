@@ -4,16 +4,15 @@ import { AuthService } from "@/lib/service/auth.service";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 
-export async function loginClinician(email: string, passwordHash: string) {
-  // In a real app we'd take plaintext and hash it, but the mobile app currently takes raw pbkdf2 hash, 
-  // so we'll match that contract or just allow password directly if it's already a hash.
-  
-  // Find user by email
+export async function loginClinician(email: string, password: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // Find user by email first to enforce clinician/admin-only portal access.
   const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() }
+    where: { email: normalizedEmail }
   });
 
-  if (!user || user.passwordHash !== passwordHash) {
+  if (!user) {
     return { error: "Invalid credentials" };
   }
 
@@ -21,11 +20,14 @@ export async function loginClinician(email: string, passwordHash: string) {
     return { error: "Access denied. Clinician role required." };
   }
 
-  // Use AuthService to create session
-  const tokenStr = await AuthService.createSession(user.id);
+  // Validate password using the same login path as the public /login endpoint.
+  const { token, error } = await AuthService.login(normalizedEmail, password);
+  if (error || !token) {
+    return { error: "Invalid credentials" };
+  }
   
   const cookieStore = await cookies();
-  cookieStore.set("suresteps.session.token", tokenStr, {
+  cookieStore.set("suresteps.session.token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",

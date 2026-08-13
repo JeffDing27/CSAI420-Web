@@ -27,35 +27,34 @@ export default async function ProviderLayout({
   if (!user || user.role !== "CLINICIAN") {
     // Non-clinicians are forbidden from provider portal
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded shadow-md text-center max-w-sm w-full">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h2>
-          <p className="text-gray-600">You must be a registered clinician to access this portal.</p>
-          <Link href="/" className="mt-6 inline-block text-blue-600 hover:underline">Return Home</Link>
+      <div className="app-shell flex items-center justify-center px-4">
+        <div className="app-panel p-8 text-center max-w-md w-full">
+          <h2 className="text-3xl font-extrabold text-rose-600 mb-3">Access Denied</h2>
+          <p className="text-slate-600">You must be a registered clinician to access this portal.</p>
+          <Link href="/" className="mt-6 inline-flex rounded-2xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200">Return Home</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div className="app-shell flex flex-col px-4 py-6 md:px-6">
+      <header className="app-panel max-w-7xl mx-auto w-full">
+        <div className="px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center space-x-8">
-            <h1 className="text-xl font-bold text-blue-600">STEDI Provider</h1>
+            <h1 className="text-2xl font-extrabold text-slate-900">STEDI Provider</h1>
             <nav className="hidden md:flex space-x-4">
-              <Link href="/provider/patients" className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Patients</Link>
-              <Link href="/provider/access-requests" className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Access Requests</Link>
-              <Link href="/provider/settings" className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Settings</Link>
+              <Link href="/provider/patients" className="text-slate-700 hover:text-slate-900 hover:bg-slate-100 px-4 py-2 rounded-2xl text-sm font-bold">Patients</Link>
+              <Link href="/provider/access-requests" className="text-slate-700 hover:text-slate-900 hover:bg-slate-100 px-4 py-2 rounded-2xl text-sm font-bold">Access Requests</Link>
             </nav>
           </div>
           <div className="flex items-center">
-            <span className="text-sm text-gray-500 mr-4">Dr. {user.lastName}</span>
-            <Link href="/provider/logout" className="text-sm text-red-600 hover:text-red-800">Logout</Link>
+            <span className="text-sm text-slate-500 mr-4">Dr. {user.lastName}</span>
+            <Link href="/provider/logout" className="rounded-2xl bg-rose-100 px-3 py-1.5 text-sm font-bold text-rose-700 hover:bg-rose-200">Logout</Link>
           </div>
         </div>
       </header>
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-1 sm:px-2 lg:px-2 py-8 w-full">
         {children}
       </main>
     </div>

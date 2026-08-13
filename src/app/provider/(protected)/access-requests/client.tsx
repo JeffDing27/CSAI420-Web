@@ -33,18 +33,18 @@ export default function ProviderAccessRequestsPage({
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Access Requests</h1>
-          <p className="mt-2 text-sm text-gray-700">
+          <h1 className="app-title">Access Requests</h1>
+          <p className="app-subtitle mt-2">
             Request access to a new patient's records and track your pending requests.
           </p>
         </div>
       </div>
 
-      <div className="mt-8 bg-white shadow sm:rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900">Request Access</h3>
+      <div className="app-panel p-6">
+        <h3 className="text-xl font-extrabold text-slate-900">Request Access</h3>
         <form className="mt-4 sm:flex sm:items-center" onSubmit={handleRequest}>
           <div className="w-full sm:max-w-xs">
             <label htmlFor="email" className="sr-only">Patient Email</label>
@@ -52,7 +52,7 @@ export default function ProviderAccessRequestsPage({
               type="email"
               name="email"
               id="email"
-              className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md py-2 px-3 border"
+              className="app-input mt-0"
               placeholder="patient@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -62,45 +62,45 @@ export default function ProviderAccessRequestsPage({
           <button
             type="submit"
             disabled={loading}
-            className="mt-3 w-full inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+            className="mt-3 w-full app-button-primary sm:mt-0 sm:ml-3 sm:w-auto"
           >
             {loading ? "Sending..." : "Request Access"}
           </button>
         </form>
         {message && (
-          <p className={`mt-3 text-sm ${message.startsWith("Error") ? "text-red-600" : "text-green-600"}`}>
+          <p className={`mt-3 text-sm font-semibold ${message.startsWith("Error") ? "text-rose-600" : "text-emerald-600"}`}>
             {message}
           </p>
         )}
       </div>
 
       <div className="mt-8">
-        <h3 className="text-lg font-medium text-gray-900">Recent Requests</h3>
+        <h3 className="text-xl font-extrabold text-slate-900">Recent Requests</h3>
         <div className="mt-4 flex flex-col">
-          <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-            <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+          <div className="app-panel p-2 md:p-3 overflow-x-auto">
+            <div className="inline-block min-w-full py-2 align-middle">
+              <div className="overflow-hidden rounded-2xl border border-slate-200">
                 <table className="min-w-full divide-y divide-gray-300">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-slate-50">
                     <tr>
-                      <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Patient Email</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Date</th>
-                      <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+                      <th className="py-3.5 pl-4 pr-3 text-left text-sm font-extrabold text-slate-800 sm:pl-6">Patient Email</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-extrabold text-slate-800">Date</th>
+                      <th className="px-3 py-3.5 text-left text-sm font-extrabold text-slate-800">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {requests?.length > 0 ? requests.map((req, idx) => (
                       <tr key={idx}>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-bold text-slate-900 sm:pl-6">
                           {req.customerEmail}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-slate-600">
                           {new Date(req.requestDate).toLocaleDateString()}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            req.status === 'approved' ? 'bg-green-100 text-green-800' : 
-                            req.status === 'denied' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                          <span className={`px-2.5 inline-flex text-xs leading-5 font-bold rounded-full ${
+                            req.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 
+                            req.status === 'denied' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
                           }`}>
                             {req.status}
                           </span>
