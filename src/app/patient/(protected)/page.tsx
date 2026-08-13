@@ -150,7 +150,7 @@ export default async function PatientPortalHomePage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold text-slate-900">Recent rapid step tests</h2>
-            <p className="mt-1 text-sm text-slate-500">Latest assessments associated with your account.</p>
+            <p className="mt-1 text-sm text-slate-500">Latest assessments associated with your account...</p>
           </div>
         </div>
 
@@ -177,7 +177,7 @@ export default async function PatientPortalHomePage() {
               ) : (
                 <tr>
                   <td className="px-4 py-8 text-center text-slate-500" colSpan={4}>
-                    No rapid step tests found for this account.
+                    No rapid step tests found for this account
                   </td>
                 </tr>
               )}
