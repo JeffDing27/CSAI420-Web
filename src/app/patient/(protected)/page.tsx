@@ -22,6 +22,7 @@ function calculateAge(birthDate: string) {
 type RemoteUserProfile = {
   birthDate?: string;
   phone?: string;
+  deviceNickName?: string;
 };
 
 async function getRemoteUserProfile(email?: string | null): Promise<RemoteUserProfile | null> {
@@ -100,6 +101,9 @@ export default async function PatientPortalHomePage() {
   const phoneForCustomerLookup = user.phone || remoteUser?.phone || null;
   const customerName = await getCustomerNameFromLocalCustomerApi(phoneForCustomerLookup);
   const displayName = customerName || `${user.firstName} ${user.lastName}`.trim();
+  const hasRemoteDevice = Boolean(remoteUser?.deviceNickName?.trim());
+  const assignedDevicesCount = Math.max(assignments.length, hasRemoteDevice ? 1 : 0);
+  const isDeviceConnected = assignedDevicesCount > 0;
 
   const latestTest = tests[0];
 
@@ -124,7 +128,7 @@ export default async function PatientPortalHomePage() {
           age={calculateAge(birthDateForAge)}
           email={user.email}
           assessmentDate={latestTest?.completedAt ? new Date(latestTest.completedAt).toLocaleDateString() : "No assessment yet"}
-          status={assignments.length > 0 ? "Device connected" : "No device assigned"}
+          status={isDeviceConnected ? "Device connected" : "No device assigned"}
         />
 
         <section className="rounded-lg bg-white p-6 shadow">
@@ -132,7 +136,7 @@ export default async function PatientPortalHomePage() {
           <dl className="mt-4 space-y-4 text-sm text-slate-700">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <dt>Assigned devices</dt>
-              <dd className="font-semibold text-slate-900">{assignments.length}</dd>
+              <dd className="font-semibold text-slate-900">{assignedDevicesCount}</dd>
             </div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <dt>Recorded tests</dt>

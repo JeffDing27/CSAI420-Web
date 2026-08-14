@@ -13,6 +13,8 @@ export default function PatientInformationCard({
   assessmentDate,
   status,
 }: PatientInformationCardProps) {
+  const isConnected = status.trim().toLowerCase() === "device connected";
+
   return (
     <section className="rounded-lg bg-white p-6 shadow">
       <h2 className="text-xl font-semibold text-gray-900">
@@ -36,9 +38,18 @@ export default function PatientInformationCard({
           <span className="font-medium">Assessment Date:</span> {assessmentDate}
         </p>
 
-        <p>
-          <span className="font-medium">Status:</span> {status}
-        </p>
+        <div className="mt-4 grid gap-4">
+          <div>
+            <p className="text-sm font-medium text-slate-500">Status</p>
+            <p
+              className={`text-sm font-semibold ${
+                isConnected ? "text-emerald-600" : "text-slate-900"
+              }`}
+            >
+              {status}
+            </p>
+          </div>
+        </div>
       </div>
     </section>
   );
