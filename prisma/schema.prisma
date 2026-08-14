@@ -78,3 +78,37 @@ model Assignment {
   notes       String
   createdAt   DateTime @default(now())
 }
+model ChatSession {
+  id                String   @id
+  userId            String?
+  threadId          String?
+  context           Json
+  nextStep          String
+  sessionActive     Boolean  @default(true)
+  accessibilityMode Boolean?
+  locale            String?
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@index([threadId])
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model ChatMessage {
+  id            String   @id @default(uuid())
+  chatSessionId String
+  role          ChatRole
+  message       String
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+}
