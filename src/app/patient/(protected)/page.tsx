@@ -246,7 +246,7 @@ export default async function PatientPortalHomePage() {
     <div className="space-y-8">
       <section className="rounded-2xl bg-gradient-to-r from-sky-700 via-sky-600 to-cyan-500 p-8 text-white shadow-lg">
         <p className="text-sm uppercase tracking-[0.2em] text-sky-100">Patient overview</p>
-        <h1 className="mt-3 text-3xl font-semibold">Welcome back, {user.firstName}.</h1>
+        <h1 className="mt-3 text-3xl font-semibold">Welcome back, {displayName}</h1>
         <p className="mt-3 max-w-2xl text-sm text-sky-50">
           Review your account details, check assigned devices, and keep track of your most recent rapid step tests.
         </p>
