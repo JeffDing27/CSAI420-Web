@@ -33,8 +33,58 @@ type RemoteRiskScore = {
 };
 
 type StepHistoryItem = {
+  startTime?: number | string;
   stopTime?: number | string;
+  testTime?: number | string;
+  totalSteps?: number | string;
 };
+
+function toTimestamp(value?: number | string): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return Number(value);
+  return Number.NaN;
+}
+
+function formatDateTime(value?: number | string): string {
+  const ts = toTimestamp(value);
+  return Number.isFinite(ts) ? new Date(ts).toLocaleString() : "N/A";
+}
+
+async function getLatestStepHistoryTestsFromLocalApi(
+  email?: string | null,
+): Promise<StepHistoryItem[]> {
+  if (!email) return [];
+
+  try {
+    const cookieStore = await cookies();
+    const surestepsToken = cookieStore.get("suresteps.session.token")?.value;
+    if (!surestepsToken) return [];
+
+    const baseUrl = process.env.INTERNAL_API_BASE_URL || "http://localhost:3000";
+    const response = await fetch(`${baseUrl}/stephistory/${encodeURIComponent(email)}`, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "suresteps.session.token": surestepsToken,
+        "suresteps-session-token": surestepsToken,
+        "x-suresteps-session-token": surestepsToken,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return [];
+
+    const data = (await response.json()) as unknown;
+    if (!Array.isArray(data)) return [];
+
+    return (data as StepHistoryItem[])
+      .slice()
+      .sort((a, b) => toTimestamp(b.stopTime) - toTimestamp(a.stopTime))
+      .slice(0, 4);
+  } catch {
+    return [];
+  }
+}
 
 async function getRemoteUserProfile(email?: string | null): Promise<RemoteUserProfile | null> {
   if (!email) return null;
@@ -215,22 +265,22 @@ export default async function PatientPortalHomePage() {
   const { user, stediMode } = await getPatientPortalUser();
   const hasLocalUser = Boolean(user.id);
 
-  const [tests, assignments, remoteUser, riskScore, stepHistoryCount, latestStepHistoryDate] = await Promise.all([
-    hasLocalUser
-      ? prisma.rapidStepTest.findMany({
-          where: { userId: user.id },
-          orderBy: { completedAt: "desc" },
-          take: 5,
-        })
-      : Promise.resolve([]),
-    hasLocalUser
-      ? DeviceService.getActiveAssignmentsForUser(user.id!)
-      : Promise.resolve([]),
-    getRemoteUserProfile(user.email),
-    getRiskScoreFromLocalApi(user.email),
-    getStepHistoryCountFromLocalApi(user.email),
-    getLatestStepHistoryDateFromLocalApi(user.email),
-  ]);
+  const [tests, assignments, remoteUser, riskScore, stepHistoryCount, latestStepHistoryDate, latestStepHistoryTests] =
+    await Promise.all([
+      hasLocalUser
+        ? prisma.rapidStepTest.findMany({
+            where: { userId: user.id },
+            orderBy: { completedAt: "desc" },
+            take: 5,
+          })
+        : Promise.resolve([]),
+      hasLocalUser ? DeviceService.getActiveAssignmentsForUser(user.id!) : Promise.resolve([]),
+      getRemoteUserProfile(user.email),
+      getRiskScoreFromLocalApi(user.email),
+      getStepHistoryCountFromLocalApi(user.email),
+      getLatestStepHistoryDateFromLocalApi(user.email),
+      getLatestStepHistoryTestsFromLocalApi(user.email),
+    ]);
 
   const birthDateForAge = user.birthDate || remoteUser?.birthDate || "";
   const phoneForCustomerLookup = user.phone || remoteUser?.phone || null;
@@ -308,26 +358,34 @@ export default async function PatientPortalHomePage() {
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50 text-left text-sm font-semibold text-slate-700">
               <tr>
-                <th className="px-4 py-3">Completed</th>
-                <th className="px-4 py-3">Source</th>
-                <th className="px-4 py-3">External ID</th>
-                <th className="px-4 py-3">Score</th>
+                <th className="px-4 py-3">Start Time</th>
+                <th className="px-4 py-3">Stop Time</th>
+                <th className="px-4 py-3">Test Time</th>
+                <th className="px-4 py-3">Total Steps</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white text-sm text-slate-700">
-              {tests.length > 0 ? (
-                tests.map((test: any) => (
-                  <tr key={test.id}>
-                    <td className="px-4 py-3">{test.completedAt ? new Date(test.completedAt).toLocaleString() : "Pending"}</td>
-                    <td className="px-4 py-3">{test.source}</td>
-                    <td className="px-4 py-3">{test.externalTestId || "-"}</td>
-                    <td className="px-4 py-3">{String((test.testData as any)?.score ?? "N/A")}</td>
+              {latestStepHistoryTests.length > 0 ? (
+                latestStepHistoryTests.map((test, idx) => (
+                  <tr key={`${toTimestamp(test.startTime)}-${toTimestamp(test.stopTime)}-${idx}`}>
+                    <td className="px-4 py-3">{formatDateTime(test.startTime)}</td>
+                    <td className="px-4 py-3">{formatDateTime(test.stopTime)}</td>
+                    <td className="px-4 py-3">
+                      {typeof test.testTime === "number" || typeof test.testTime === "string"
+                        ? String(test.testTime)
+                        : "N/A"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {typeof test.totalSteps === "number" || typeof test.totalSteps === "string"
+                        ? String(test.totalSteps)
+                        : "N/A"}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td className="px-4 py-8 text-center text-slate-500" colSpan={4}>
-                    No rapid step tests found for this account
+                    No step history tests found for this account
                   </td>
                 </tr>
               )}
