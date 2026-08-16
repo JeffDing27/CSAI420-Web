@@ -25,6 +25,13 @@ type RemoteUserProfile = {
   deviceNickName?: string;
 };
 
+type RemoteRiskScore = {
+  customer?: string;
+  score?: number;
+  riskDate?: string;
+  birthYear?: number;
+};
+
 async function getRemoteUserProfile(email?: string | null): Promise<RemoteUserProfile | null> {
   if (!email) return null;
 
@@ -48,6 +55,54 @@ async function getRemoteUserProfile(email?: string | null): Promise<RemoteUserPr
     const data = (await response.json()) as RemoteUserProfile;
     return data;
   } catch {
+    return null;
+  }
+}
+
+async function getRiskScoreFromLocalApi(email?: string | null): Promise<number | null> {
+  if (!email) return null;
+
+  try {
+    const cookieStore = await cookies();
+    const surestepsToken = cookieStore.get("suresteps.session.token")?.value;
+    if (!surestepsToken) {
+      console.log("[RiskScore] Missing suresteps.session.token");
+      return null;
+    }
+
+    const baseUrl = process.env.INTERNAL_API_BASE_URL || "http://localhost:3000";
+    const url = `${baseUrl}/riskscore/${encodeURIComponent(email)}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "suresteps.session.token": surestepsToken,
+        "suresteps-session-token": surestepsToken,
+        "x-suresteps-session-token": surestepsToken,
+      },
+      cache: "no-store",
+    });
+
+    const raw = await response.text();
+
+    if (!response.ok) {
+      console.log("[RiskScore] Non-OK response", response.status, raw);
+      return null;
+    }
+
+    const data = JSON.parse(raw) as RemoteRiskScore;
+    const parsed =
+      typeof data?.score === "number"
+        ? data.score
+        : typeof data?.score === "string"
+          ? Number(data.score)
+          : null;
+
+    if (parsed === null || Number.isNaN(parsed)) return null;
+    return parsed;
+  } catch (err) {
+    console.log("[RiskScore] Fetch error", err);
     return null;
   }
 }
@@ -83,7 +138,7 @@ export default async function PatientPortalHomePage() {
   const { user, stediMode } = await getPatientPortalUser();
   const hasLocalUser = Boolean(user.id);
 
-  const [tests, assignments, remoteUser] = await Promise.all([
+  const [tests, assignments, remoteUser, riskScore] = await Promise.all([
     hasLocalUser
       ? prisma.rapidStepTest.findMany({
           where: { userId: user.id },
@@ -95,6 +150,7 @@ export default async function PatientPortalHomePage() {
       ? DeviceService.getActiveAssignmentsForUser(user.id!)
       : Promise.resolve([]),
     getRemoteUserProfile(user.email),
+    getRiskScoreFromLocalApi(user.email),
   ]);
 
   const birthDateForAge = user.birthDate || remoteUser?.birthDate || "";
@@ -141,6 +197,12 @@ export default async function PatientPortalHomePage() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <dt>Recorded tests</dt>
               <dd className="font-semibold text-slate-900">{tests.length}</dd>
+            </div>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <dt>Risk score</dt>
+              <dd className="font-semibold text-slate-900">
+                {riskScore !== null ? riskScore.toFixed(1) : "N/A"}
+              </dd>
             </div>
             <div className="flex items-center justify-between">
               <dt>Portal access</dt>
