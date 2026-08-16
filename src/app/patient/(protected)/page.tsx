@@ -32,6 +32,10 @@ type RemoteRiskScore = {
   birthYear?: number;
 };
 
+type StepHistoryItem = {
+  stopTime?: number | string;
+};
+
 async function getRemoteUserProfile(email?: string | null): Promise<RemoteUserProfile | null> {
   if (!email) return null;
 
@@ -163,11 +167,55 @@ async function getStepHistoryCountFromLocalApi(email?: string | null): Promise<n
   }
 }
 
+async function getLatestStepHistoryDateFromLocalApi(email?: string | null): Promise<string | null> {
+  if (!email) return null;
+
+  try {
+    const cookieStore = await cookies();
+    const surestepsToken = cookieStore.get("suresteps.session.token")?.value;
+    if (!surestepsToken) return null;
+
+    const baseUrl = process.env.INTERNAL_API_BASE_URL || "http://localhost:3000";
+    const response = await fetch(`${baseUrl}/stephistory/${encodeURIComponent(email)}`, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "suresteps.session.token": surestepsToken,
+        "suresteps-session-token": surestepsToken,
+        "x-suresteps-session-token": surestepsToken,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as unknown;
+    if (!Array.isArray(data) || data.length === 0) return null;
+
+    const latestStopTime = (data as StepHistoryItem[])
+      .map((item) =>
+        typeof item.stopTime === "number"
+          ? item.stopTime
+          : typeof item.stopTime === "string"
+            ? Number(item.stopTime)
+            : NaN,
+      )
+      .filter((value) => Number.isFinite(value))
+      .reduce((max, value) => Math.max(max, value), Number.NEGATIVE_INFINITY);
+
+    if (!Number.isFinite(latestStopTime)) return null;
+
+    return new Date(latestStopTime).toLocaleDateString();
+  } catch {
+    return null;
+  }
+}
+
 export default async function PatientPortalHomePage() {
   const { user, stediMode } = await getPatientPortalUser();
   const hasLocalUser = Boolean(user.id);
 
-  const [tests, assignments, remoteUser, riskScore, stepHistoryCount] = await Promise.all([
+  const [tests, assignments, remoteUser, riskScore, stepHistoryCount, latestStepHistoryDate] = await Promise.all([
     hasLocalUser
       ? prisma.rapidStepTest.findMany({
           where: { userId: user.id },
@@ -181,6 +229,7 @@ export default async function PatientPortalHomePage() {
     getRemoteUserProfile(user.email),
     getRiskScoreFromLocalApi(user.email),
     getStepHistoryCountFromLocalApi(user.email),
+    getLatestStepHistoryDateFromLocalApi(user.email),
   ]);
 
   const birthDateForAge = user.birthDate || remoteUser?.birthDate || "";
@@ -213,7 +262,12 @@ export default async function PatientPortalHomePage() {
           name={displayName}
           age={calculateAge(birthDateForAge)}
           email={user.email}
-          assessmentDate={latestTest?.completedAt ? new Date(latestTest.completedAt).toLocaleDateString() : "No assessment yet"}
+          assessmentDate={
+            latestStepHistoryDate ??
+            (latestTest?.completedAt
+              ? new Date(latestTest.completedAt).toLocaleDateString()
+              : "No assessment yet")
+          }
           status={isDeviceConnected ? "Device connected" : "No device assigned"}
         />
 
