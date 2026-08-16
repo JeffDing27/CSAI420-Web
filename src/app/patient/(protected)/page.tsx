@@ -134,11 +134,40 @@ async function getCustomerNameFromLocalCustomerApi(phone?: string | null): Promi
   }
 }
 
+async function getStepHistoryCountFromLocalApi(email?: string | null): Promise<number | null> {
+  if (!email) return null;
+
+  try {
+    const cookieStore = await cookies();
+    const surestepsToken = cookieStore.get("suresteps.session.token")?.value;
+    if (!surestepsToken) return null;
+
+    const baseUrl = process.env.INTERNAL_API_BASE_URL || "http://localhost:3000";
+    const response = await fetch(`${baseUrl}/stephistory/${encodeURIComponent(email)}`, {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "suresteps.session.token": surestepsToken,
+        "suresteps-session-token": surestepsToken,
+        "x-suresteps-session-token": surestepsToken,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as unknown;
+    return Array.isArray(data) ? data.length : null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function PatientPortalHomePage() {
   const { user, stediMode } = await getPatientPortalUser();
   const hasLocalUser = Boolean(user.id);
 
-  const [tests, assignments, remoteUser, riskScore] = await Promise.all([
+  const [tests, assignments, remoteUser, riskScore, stepHistoryCount] = await Promise.all([
     hasLocalUser
       ? prisma.rapidStepTest.findMany({
           where: { userId: user.id },
@@ -151,6 +180,7 @@ export default async function PatientPortalHomePage() {
       : Promise.resolve([]),
     getRemoteUserProfile(user.email),
     getRiskScoreFromLocalApi(user.email),
+    getStepHistoryCountFromLocalApi(user.email),
   ]);
 
   const birthDateForAge = user.birthDate || remoteUser?.birthDate || "";
@@ -196,7 +226,7 @@ export default async function PatientPortalHomePage() {
             </div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <dt>Recorded tests</dt>
-              <dd className="font-semibold text-slate-900">{tests.length}</dd>
+              <dd className="font-semibold text-slate-900">{stepHistoryCount ?? tests.length}</dd>
             </div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <dt>Risk score</dt>
